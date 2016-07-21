@@ -40,6 +40,7 @@
 #include "lib/fatfs/diskio.h"
 #include "pin.h"
 #include "adc.h"
+#include "dac.h"
 
 /// \function millis()
 /// Returns the number of milliseconds since the board was last reset.
@@ -134,6 +135,7 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_Pin), (mp_obj_t)&pin_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_ADC), (mp_obj_t)&pyb_adc_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_DAC), (mp_obj_t)&pyb_dac_type }, \
 };
 
 
