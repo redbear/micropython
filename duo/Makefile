@@ -200,6 +200,7 @@ MP_SOURCE = \
 	modpyb.c \
 	adc.c \
 	dac.c \
+	timer.c \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/,$(HAL_SOURCES:.c=.o))
