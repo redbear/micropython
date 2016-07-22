@@ -1,5 +1,5 @@
-#ifndef _GPIO_API_H
-#define _GPIO_API_H
+#ifndef _TONE_API_H
+#define _TONE_API_H
 
 
 void tone(uint8_t pin, unsigned int frequency, unsigned long duration);
