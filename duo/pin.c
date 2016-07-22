@@ -32,6 +32,7 @@
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "pin.h"
+#include "wiring.h"
 
 /// \moduleref pyb
 /// \class Pin - control I/O pins
@@ -275,18 +276,19 @@ STATIC mp_obj_t pin_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uin
 STATIC mp_obj_t pin_call(mp_obj_t self_in, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     pin_obj_t *self = self_in;
+	const uint16_t pin = pin_mapping(self);
     if (n_args == 0) {
         // get pin
-    	const uint16_t pin = pin_mapping(self);
+    	pinMode(pin, INPUT_PULLUP);
         return MP_OBJ_NEW_SMALL_INT(digitalRead(pin));
     } else {
         // set pin
         if (mp_obj_is_true(args[0])) {
-            pinMode(self->port, OUTPUT);
-            digitalWrite(self->port, 1);
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, 1);
         } else {
-            pinMode(self->port, OUTPUT);
-            digitalWrite(self->port, 0);
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, 0);
         }
         return mp_const_none;
     }
@@ -385,13 +387,13 @@ STATIC mp_obj_t pin_obj_init_helper(const pin_obj_t *self, mp_uint_t n_args, con
 
     // if given, set the pin value before initialising to prevent glitches
     if (args[3].u_obj != MP_OBJ_NULL) {
+        const uint16_t pin = pin_mapping(self);
         if (mp_obj_is_true(args[3].u_obj)) {
-            const uint16_t pin = pin_mapping(self);
             pinMode(pin, OUTPUT);
             digitalWrite(pin, 1);
         } else {
-            pinMode(self->port, OUTPUT);
-            digitalWrite(self->port, 0);
+            pinMode(pin, OUTPUT);
+            digitalWrite(pin, 0);
         }
     }
 
@@ -420,6 +422,7 @@ MP_DEFINE_CONST_FUN_OBJ_KW(pin_init_obj, 1, pin_obj_init);
 ///   is set high, otherwise it is set low.
 STATIC mp_obj_t pin_value(mp_uint_t n_args, const mp_obj_t *args) {
     return pin_call(args[0], n_args - 1, 0, args + 1);
+
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_value_obj, 1, 2, pin_value);
 
@@ -444,6 +447,44 @@ STATIC mp_obj_t pin_high(mp_obj_t self_in) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_high_obj, pin_high);
+
+STATIC mp_obj_t pin_shift_in(mp_obj_t data_in, mp_obj_t clock, mp_obj_t bit_order) {
+    pin_obj_t *self_data = data_in;
+    pin_obj_t *self_clock = clock;
+    uint8_t data_pin = pin_mapping(self_data);
+    uint8_t clock_pin = pin_mapping(self_clock);
+    pinMode(data_pin, INPUT);
+    pinMode(clock_pin, OUTPUT);
+
+    return MP_OBJ_NEW_SMALL_INT(shiftIn(data_pin, clock_pin, mp_obj_get_int(bit_order)));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pin_shift_in_obj, pin_shift_in);
+
+STATIC mp_obj_t pin_shift_out(mp_uint_t n_args, const mp_obj_t *args) {
+    pin_obj_t *self_data = args[0];
+    pin_obj_t *self_clock = args[1];
+    uint8_t data_pin = pin_mapping(self_data);
+    uint8_t clock_pin = pin_mapping(self_clock);
+    uint8_t  bit_order = mp_obj_get_int(args[2]);
+    uint8_t  value = mp_obj_get_int(args[3]);
+
+    pinMode(data_pin, OUTPUT);
+    pinMode(clock_pin, OUTPUT);
+
+    shiftOut(data_pin, clock_pin, bit_order, value);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_shift_out_obj, 4, 4, pin_shift_out);
+
+STATIC mp_obj_t pin_pulse_in(mp_obj_t self_in, const mp_obj_t value) {
+    pin_obj_t *self_data = self_in;
+    uint8_t data_pin = pin_mapping(self_data);
+    pinMode(data_pin, INPUT);
+    uint32_t duration = pulseIn(data_pin, mp_obj_get_int(value));
+
+    return MP_OBJ_NEW_SMALL_INT(duration);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pin_pulse_in_obj, pin_pulse_in);
 
 /// \method name()
 /// Get the pin name.
@@ -565,19 +606,22 @@ const mp_obj_type_t pin_board_pins_obj_type = {
 
 STATIC const mp_map_elem_t pin_locals_dict_table[] = {
     // instance methods
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),    (mp_obj_t)&pin_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_value),   (mp_obj_t)&pin_value_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_low),     (mp_obj_t)&pin_low_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_high),    (mp_obj_t)&pin_high_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_name),    (mp_obj_t)&pin_name_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_names),   (mp_obj_t)&pin_names_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_af_list), (mp_obj_t)&pin_af_list_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_port),    (mp_obj_t)&pin_port_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_pin),     (mp_obj_t)&pin_pin_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_gpio),    (mp_obj_t)&pin_gpio_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mode),    (mp_obj_t)&pin_mode_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_pull),    (mp_obj_t)&pin_pull_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_af),      (mp_obj_t)&pin_af_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init),       (mp_obj_t)&pin_init_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_value),      (mp_obj_t)&pin_value_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_low),        (mp_obj_t)&pin_low_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_high),       (mp_obj_t)&pin_high_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_name),       (mp_obj_t)&pin_name_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_names),      (mp_obj_t)&pin_names_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_af_list),    (mp_obj_t)&pin_af_list_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_port),       (mp_obj_t)&pin_port_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_pin),        (mp_obj_t)&pin_pin_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_gpio),       (mp_obj_t)&pin_gpio_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mode),       (mp_obj_t)&pin_mode_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_pull),       (mp_obj_t)&pin_pull_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_af),         (mp_obj_t)&pin_af_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_shift_in),   (mp_obj_t)&pin_shift_in_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_shift_out),  (mp_obj_t)&pin_shift_out_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_pulse_in),   (mp_obj_t)&pin_pulse_in_obj },
 
     // class methods
     { MP_OBJ_NEW_QSTR(MP_QSTR_mapper),  (mp_obj_t)&pin_mapper_obj },
