@@ -267,12 +267,24 @@ void mp_stream_write_adaptor(void *self, const char *buf, size_t len) {
     mp_stream_write(MP_OBJ_FROM_PTR(self), buf, len, MP_STREAM_RW_WRITE);
 }
 
-STATIC mp_obj_t stream_write_method(mp_obj_t self_in, mp_obj_t arg) {
+STATIC mp_obj_t stream_write_method(size_t n_args, const mp_obj_t *args) {
     mp_buffer_info_t bufinfo;
-    mp_get_buffer_raise(arg, &bufinfo, MP_BUFFER_READ);
-    return mp_stream_write(self_in, bufinfo.buf, bufinfo.len, MP_STREAM_RW_WRITE);
+    mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_READ);
+    size_t max_len = (size_t)-1;
+    size_t off = 0;
+    if (n_args == 3) {
+        max_len = mp_obj_get_int_truncated(args[2]);
+    } else if (n_args == 4) {
+        off = mp_obj_get_int_truncated(args[2]);
+        max_len = mp_obj_get_int_truncated(args[3]);
+        if (off > bufinfo.len) {
+            off = bufinfo.len;
+        }
+    }
+    bufinfo.len -= off;
+    return mp_stream_write(args[0], (byte*)bufinfo.buf + off, MIN(bufinfo.len, max_len), MP_STREAM_RW_WRITE);
 }
-MP_DEFINE_CONST_FUN_OBJ_2(mp_stream_write_obj, stream_write_method);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_stream_write_obj, 2, 4, stream_write_method);
 
 STATIC mp_obj_t stream_write1_method(mp_obj_t self_in, mp_obj_t arg) {
     mp_buffer_info_t bufinfo;
@@ -464,6 +476,17 @@ STATIC mp_obj_t stream_tell(mp_obj_t self) {
     return stream_seek(3, args);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(mp_stream_tell_obj, stream_tell);
+
+STATIC mp_obj_t stream_flush(mp_obj_t self) {
+    const mp_stream_p_t *stream_p = mp_get_stream_raise(self, MP_STREAM_OP_IOCTL);
+    int error;
+    mp_uint_t res = stream_p->ioctl(self, MP_STREAM_FLUSH, 0, &error);
+    if (res == MP_STREAM_ERROR) {
+        nlr_raise(mp_obj_new_exception_arg1(&mp_type_OSError, MP_OBJ_NEW_SMALL_INT(error)));
+    }
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_1(mp_stream_flush_obj, stream_flush);
 
 STATIC mp_obj_t stream_ioctl(size_t n_args, const mp_obj_t *args) {
     const mp_stream_p_t *stream_p = mp_get_stream_raise(args[0], MP_STREAM_OP_IOCTL);
