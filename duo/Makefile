@@ -202,6 +202,7 @@ MP_SOURCE = \
 	dac.c \
 	timer.c \
 	uart.c \
+	spi.c \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/,$(HAL_SOURCES:.c=.o))
