@@ -43,6 +43,7 @@
 #include "dac.h"
 #include "timer.h"
 #include "uart.h"
+#include "spi.h"
 
 /// \function millis()
 /// Returns the number of milliseconds since the board was last reset.
@@ -140,6 +141,7 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_DAC), (mp_obj_t)&pyb_dac_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_Timer), (mp_obj_t)&pyb_timer_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_UART), (mp_obj_t)&pyb_uart_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI), (mp_obj_t)&pyb_spi_type }, \
 };
 
 
