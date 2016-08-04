@@ -45,6 +45,7 @@
 #include "uart.h"
 #include "spi.h"
 #include "i2c.h"
+#include "extint.h"
 
 /// \function millis()
 /// Returns the number of milliseconds since the board was last reset.
@@ -144,6 +145,7 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_UART), (mp_obj_t)&pyb_uart_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI), (mp_obj_t)&pyb_spi_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_I2C), (mp_obj_t)&pyb_i2c_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_EXTINT), (mp_obj_t)&pyb_extint_type }, \
 };
 
 
