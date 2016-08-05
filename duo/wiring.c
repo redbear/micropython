@@ -10,7 +10,9 @@
 #include "lib/utils/pyexec.h"
 #include "readline.h"
 #include "wiring.h"
+#include "extint.h"
 
+uint32_t pyb_extint_callback[EXTI_NUM_VECTORS];
 
 void do_str(const char *src, mp_parse_input_kind_t input_kind) {
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
