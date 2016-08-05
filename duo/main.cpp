@@ -3,6 +3,7 @@
 #include "wiring.h"
 
 SYSTEM_MODE(SEMI_AUTOMATIC);
+SYSTEM_THREAD(ENABLED);
 
 void setup()
 {
