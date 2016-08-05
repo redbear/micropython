@@ -10,7 +10,7 @@ uint32_t pyb_extint_callback[EXTI_NUM_VECTORS];
 
 void setup()
 {
-	extint_init0();
+
 }
 
 void loop()
