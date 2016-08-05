@@ -45,6 +45,7 @@ void mp_setup() {
 
     mp_init();
     readline_init0(); 
+    extint_init0();
 
 #if MICROPY_REPL_EVENT_DRIVEN
     pyexec_event_repl_init();
