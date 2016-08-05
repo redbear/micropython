@@ -158,7 +158,7 @@ STATIC mp_obj_t pyb_spi_recv_char(mp_obj_t self_in) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_spi_recv_char_obj, pyb_spi_recv_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_spi_recv_char_obj, pyb_spi_recv_char);
 
 /// \method send(send, *, timeout=5000)
 /// Send data on the bus:
@@ -198,6 +198,7 @@ STATIC mp_obj_t pyb_spi_send(mp_obj_t self_in, mp_obj_t send_buffer) {
         	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
         			"SPI(%d) does not exist", self->spi_id));
         }
+        free(buf);
     }
 
     return mp_const_none;
