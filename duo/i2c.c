@@ -87,22 +87,22 @@ STATIC mp_obj_t pyb_i2c_make_new(void) {
 }
 
 
-STATIC mp_obj_t pyb_i2c_init(mp_obj_t shlf_in) {
+STATIC mp_obj_t pyb_i2c_init() {
     i2c_begin();
 
 	return mp_const_none;
 
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(pyb_i2c_init_obj, 0, pyb_i2c_init);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_init_obj, pyb_i2c_init);
 
 /// \method deinit()
 /// Turn off the I2C bus.
-STATIC mp_obj_t pyb_i2c_deinit(mp_obj_t self_in) {
+STATIC mp_obj_t pyb_i2c_deinit() {
     i2c_end();
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_deinit_obj, pyb_i2c_deinit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_deinit_obj, pyb_i2c_deinit);
 
 STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t self_in, mp_obj_t data, mp_obj_t addr) {
     pyb_i2c_obj_t *self = self_in;
@@ -136,7 +136,7 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t ad
 	i2c_beginTransmission((uint8_t)mp_obj_get_int(addr));
 
     if(MP_OBJ_IS_STR(send_buffer)) {
-    	uint8_t *buf = mp_obj_str_get_str(send_buffer);
+    	char *buf = mp_obj_str_get_str(send_buffer);
 
         i2c_writeBytes(buf, strlen(buf));
         transfer_status(i2c_endTransmission(1));
@@ -146,7 +146,7 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t ad
     } else {
     	int i = 0;
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(send_buffer);
-    	uint8_t *buf = NULL;
+    	char *buf = NULL;
     	buf = (char *)malloc(buffer->len);
 
     	for(; i < buffer->len; i++) {
@@ -155,6 +155,8 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t ad
 
     	i2c_writeBytes(buf, i);
     	transfer_status(i2c_endTransmission(1));
+
+    	free(buf);
 
     	return MP_OBJ_NEW_SMALL_INT(i);
     }
