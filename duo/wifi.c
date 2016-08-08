@@ -1,0 +1,574 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#include "py/obj.h"
+#include "py/nlr.h"
+#include "py/runtime.h"
+#include "py/binary.h"
+#include "py/mphal.h"
+#include "wifi.h"
+#include "pin.h"
+#include "genhdr/pins.h"
+#include "wiring.h"
+
+#define bool  _Bool
+#define true  1
+#define false 0
+
+typedef enum {
+	WIFI_STATE_OFF,
+	WIFI_STATE_ON,
+	WIFI_STATE_CONNECTING,
+	WIFI_STATE_CONNECTED,
+} WiFi_State_t;
+
+static WiFi_State_t wifi_state = WIFI_STATE_OFF;
+static bool connect_failed = false;
+
+STATIC mp_obj_t pyb_wifi_on() {
+	if(!connect_failed)
+		wifi_on();
+	if(wifi_state < WIFI_STATE_ON)
+		wifi_state = WIFI_STATE_ON;
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_on_obj, pyb_wifi_on);
+
+STATIC mp_obj_t pyb_wifi_off() {
+
+	wifi_off();
+	wifi_state = WIFI_STATE_OFF;
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_off_obj, pyb_wifi_off);
+
+STATIC mp_obj_t pyb_wifi_connect() {
+//	uint8_t localIP[4] = {0};
+	uint32_t cur_time = millis();
+
+	if(wifi_hasCredentials()) {
+		wifi_connect();
+		wifi_state = WIFI_STATE_CONNECTING;
+		while(!wifi_isReady() && (millis() - cur_time) < 5000) {
+//			while (localIP[0] == 0) {
+//			    wifi_localIP(localIP);
+//			    delay(1000);
+//			  }
+
+		}
+
+		if(wifi_isReady()) {
+			wifi_state = WIFI_STATE_CONNECTED;
+			connect_failed = false;
+		}
+		else {
+			wifi_off();
+			connect_failed = true;
+			wifi_state = WIFI_STATE_OFF;
+			nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "Connect to AP failed! Please try again!"));
+		}
+	} else {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "No WiFi credentials available in Duo.\n \
+            Use WiFi.setCredential({\"ssid\":\"YOUR_SSID\", \"password\":\"YOUR_PASS_WORD\", \"sec\":\"SECUTITY_TYPE\", \"cipher\":\"CIPHER_TYPE\"})\n \
+            to set a valid credential first."));
+	}
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_connect_obj, pyb_wifi_connect);
+
+STATIC mp_obj_t pyb_wifi_disconnect() {
+	wifi_disconnect();
+	if(wifi_state > WIFI_STATE_ON)
+		wifi_state = WIFI_STATE_ON;
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_disconnect_obj, pyb_wifi_disconnect);
+
+STATIC mp_obj_t pyb_wifi_connecting() {
+
+	if (mp_obj_is_true(MP_OBJ_NEW_SMALL_INT(wifi_isConnecting()))) {
+		return mp_const_true;
+	} else {
+		return mp_const_false;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_connecting_obj, pyb_wifi_connecting);
+
+STATIC mp_obj_t pyb_wifi_ready() {
+
+	if (wifi_isReady()) {
+		return mp_const_true;
+	} else {
+		return mp_const_false;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_ready_obj, pyb_wifi_ready);
+
+STATIC mp_obj_t pyb_wifi_listen(mp_uint_t n_args, const mp_obj_t *args) {
+
+		if(n_args == 0) {
+			wifi_startListen();
+		} else {
+			if (mp_obj_is_true(args[0])) {
+				wifi_startListen();
+			} else {
+				wifi_stopListen();
+			}
+		}
+
+		while(wifi_isListening());
+
+	return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_wifi_listen_obj, 0, 1, pyb_wifi_listen);
+
+STATIC mp_obj_t pyb_wifi_listening() {
+
+	if (mp_obj_is_true(MP_OBJ_NEW_SMALL_INT(wifi_isListening()))) {
+		return mp_const_true;
+	} else {
+		return mp_const_false;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_listening_obj, pyb_wifi_listening);
+
+STATIC mp_obj_t pyb_wifi_set_credentials(mp_uint_t n_args, const mp_obj_t *args) {
+
+	const char* ssid = mp_obj_str_get_str(args[0]);
+	const char* password = mp_obj_str_get_str(args[1]);
+	uint32_t security = mp_obj_get_int(args[2]);
+	uint32_t cipher = mp_obj_get_int(args[3]);
+
+	if(wifi_state == WIFI_STATE_OFF)
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi is turned off. Use WiFi.on() to enable WiFi first."));
+	if(ssid[0] == '\0')
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The length of SSID is equal to 0."));
+
+	printf("ssid : %s\npassword : %s \nsecurity : %lu\ncipher : %lu\n", ssid, password, security, cipher);
+
+	if(connect_failed)
+		wifi_on();
+	wifi_setCredentials(ssid, password, security, cipher);
+	if(connect_failed)
+		wifi_off;
+
+	return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_wifi_set_credentials_obj, 4, 4, pyb_wifi_set_credentials);
+
+STATIC char *get_security(int num) {
+	static char security[16];
+	memset(security, '\0', 16);
+
+	switch(num) {
+	case 0 :
+		strcpy(security, "WLAN_SEC_UNSEC");
+		break;
+	case 1 :
+		strcpy(security, "WLAN_SEC_WEP");
+		break;
+	case 2 :
+		strcpy(security, "WLAN_SEC_WPA");
+		break;
+	case 3 :
+		strcpy(security, "WLAN_SEC_WPA2");
+		break;
+	case 0xff :
+		strcpy(security, "WLAN_SEC_NOT_SET");
+		break;
+	default :
+		strcpy(security, "WLAN_SEC_UNKNOWN");
+		break;
+	}
+
+	return security;
+}
+
+STATIC char *get_cipher(int num) {
+	static char cipher[16];
+	memset(cipher, '\0', 16);
+
+	switch(num) {
+	case 0 :
+		strcpy(cipher, "WLAN_CIPHER_NOT_SET");
+		break;
+	case 1 :
+		strcpy(cipher, "WLAN_CIPHER_AES");
+		break;
+	case 2 :
+		strcpy(cipher, "WLAN_CIPHER_TKIP");
+		break;
+	case 3 :
+		strcpy(cipher, "WLAN_CIPHER_AES_TKIP");
+		break;
+	default :
+		break;
+	}
+
+	return cipher;
+}
+
+STATIC mp_obj_t pyb_wifi_get_credentials(mp_obj_t buf_in, mp_obj_t count) {
+	size_t result_count = mp_obj_get_int(count);
+	WiFiAccessPoint results[result_count];
+	int found = wifi_getCredentials(results, result_count);
+	char buffer[128];
+	int i = 0, num = 0;
+	if(found < result_count)
+		num = found;
+	else
+		num = result_count;
+
+	for(; i < num ; i++) {
+		uint8_t ssidLen = results[i].ssidLength;
+		results[i].ssid[ssidLen] = '\0';
+		memset(buffer, '\0', 128);
+		int j = 0;
+		j = sprintf(buffer, "ssid%d : %s    ", i, results[i].ssid);
+		printf("ssid : %s\n", results[i].ssid);
+
+		j += sprintf(buffer + j, "security%d : %s    ", i, get_security(results[i].security));
+		printf("security : %s\n", get_security(results[i].security));
+
+		j += sprintf(buffer + j, "cipher%d : %s    ", i, get_cipher(results[i].cipher));
+		printf("cipher : %s\n\n", get_cipher(results[i].cipher));
+
+		mp_obj_list_append(buf_in, mp_obj_new_str(buffer, strlen(buffer), true));
+	}
+
+	return MP_OBJ_NEW_SMALL_INT(num);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_get_credentials_obj, pyb_wifi_get_credentials);
+
+STATIC mp_obj_t pyb_wifi_has_credentials() {
+
+	if (wifi_hasCredentials()) {
+		return mp_const_true;
+	} else {
+		return mp_const_false;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_has_credentials_obj, pyb_wifi_has_credentials);
+
+STATIC mp_obj_t pyb_wifi_clear_credentials() {
+
+	if (mp_obj_is_true(MP_OBJ_NEW_SMALL_INT(wifi_clearCredentials()))) {
+		return mp_const_true;
+	} else {
+		return mp_const_false;
+	}
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_clear_credentials_obj, pyb_wifi_clear_credentials);
+
+STATIC mp_obj_t pyb_wifi_mac_address(mp_obj_t buf_in) {
+	uint8_t mac[6];
+	char buffer[11];
+
+	wifi_macAddress(mac);
+
+	sprintf(buffer, "%d:%d:%d:%d:%d:%d", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_mac_address_obj, pyb_wifi_mac_address);
+
+STATIC mp_obj_t pyb_wifi_SSID() {
+	char* ssid = NULL;
+	ssid = wifi_SSID();
+
+    return mp_obj_new_str(ssid, strlen(ssid), true);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_SSID_obj, pyb_wifi_SSID);
+
+STATIC mp_obj_t pyb_wifi_BSSID(mp_obj_t buf_in) {
+	uint8_t mac[6];
+	char buffer[11];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+
+	wifi_BSSID(mac);
+
+	sprintf(buffer, "%d:%d:%d:%d:%d:%d", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_BSSID_obj, pyb_wifi_BSSID);
+
+STATIC mp_obj_t pyb_wifi_RSSI() {
+
+    return MP_OBJ_NEW_SMALL_INT(wifi_RSSI());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_RSSI_obj, pyb_wifi_RSSI);
+
+STATIC mp_obj_t pyb_wifi_ping(mp_obj_t buf_in, mp_obj_t nTries) {
+	int i = 0;
+	const mp_obj_list_t *buffer = buf_in;
+	uint8_t ip[4];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+
+	for(; i < 4; i++) {
+		ip[i] = mp_obj_get_int(buffer->items[i]);
+	}
+
+    return MP_OBJ_NEW_SMALL_INT(wifi_ping(ip, mp_obj_get_int(nTries)));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_ping_obj, pyb_wifi_ping);
+
+STATIC mp_obj_t pyb_wifi_scan(mp_obj_t buf_in, mp_obj_t count) {
+	size_t result_count = mp_obj_get_int(count);
+	WiFiAccessPoint results[result_count];
+	char buffer[128];
+
+	if(wifi_state == WIFI_STATE_OFF)
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi is turned off. Use WiFi.on() to enable WiFi first."));
+
+	int found = wifi_scan(results, result_count);
+	int i = 0, num = 0;
+	if(found < result_count)
+		num = found;
+	else
+		num = result_count;
+
+	for(; i < num ; i++) {
+		uint8_t ssidLen = results[i].ssidLength;
+		results[i].ssid[ssidLen] = '\0';
+		memset(buffer, '\0', 128);
+		int j = 0;
+
+		j = sprintf(buffer, "ssid%d : %s    ", i, results[i].ssid);
+		printf("ssid : %s\n", results[i].ssid);
+
+		j += sprintf(buffer + j, "security%d : %s    ", i, get_security(results[i].security));
+		printf("security : %s\n", get_security(results[i].security));
+
+		j += sprintf(buffer + j, "cipher%d : %s    ", i, get_cipher(results[i].cipher));
+		printf("cipher : %s\n", get_cipher(results[i].cipher));
+
+		j += sprintf(buffer + j, "RSSI%d : %d    ", i, results[i].rssi);
+		printf("RSSI : %d\n\n", results[i].rssi);
+
+		mp_obj_list_append(buf_in, mp_obj_new_str(buffer, strlen(buffer), true));
+	}
+
+	return MP_OBJ_NEW_SMALL_INT(num);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_scan_obj, pyb_wifi_scan);
+
+STATIC mp_obj_t pyb_wifi_resolve(mp_obj_t buf_in, mp_obj_t data_in) {
+	uint8_t ip[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+	const char* name = mp_obj_str_get_str(buf_in);
+	wifi_resolve(name, ip);
+
+	sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+	mp_obj_list_append(data_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_resolve_obj, pyb_wifi_resolve);
+
+STATIC mp_obj_t pyb_wifi_local_IP(mp_obj_t buf_in) {
+	uint8_t local_ip[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+
+	wifi_localIP(local_ip);
+
+	sprintf(buffer, "%d.%d.%d.%d", local_ip[0], local_ip[1], local_ip[2], local_ip[3]);
+	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_local_IP_obj, pyb_wifi_local_IP);
+
+STATIC mp_obj_t pyb_wifi_subnet_mask(mp_obj_t buf_in) {
+	uint8_t subnet_mask[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+
+	wifi_subnetMask(subnet_mask);
+
+	sprintf(buffer, "%d.%d.%d.%d", subnet_mask[0], subnet_mask[1], subnet_mask[2], subnet_mask[3]);
+	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_subnet_mask_obj, pyb_wifi_subnet_mask);
+
+STATIC mp_obj_t pyb_wifi_gateway_IP(mp_obj_t buf_in) {
+	uint8_t gateway_ip[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
+	}
+
+	wifi_gatewayIP(gateway_ip);
+
+	sprintf(buffer, "%d.%d.%d.%d", gateway_ip[0], gateway_ip[1], gateway_ip[2], gateway_ip[3]);
+	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_gateway_IP_obj, pyb_wifi_gateway_IP);
+
+STATIC mp_obj_t pyb_wifi_dns_server_IP(mp_obj_t buf_in) {
+	int i = 0;
+	const mp_obj_list_t *buffer = buf_in;
+	uint8_t *dns_ip;
+	dns_ip = (uint8_t *)malloc(buffer->len);
+	for(; i < buffer->len; i++) {
+		dns_ip[i] = mp_obj_get_int(buffer->items[i]);
+	}
+	wifi_dnsServerIP(dns_ip);
+	free(dns_ip);
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_dns_server_IP_obj, pyb_wifi_dns_server_IP);
+
+STATIC mp_obj_t pyb_wifi_dhcp_server_IP(mp_obj_t buf_in) {
+	int i = 0;
+	const mp_obj_list_t *buffer = buf_in;
+	uint8_t *dhcp_ip;
+	dhcp_ip = (uint8_t *)malloc(buffer->len);
+	for(; i < buffer->len; i++) {
+		dhcp_ip[i] = mp_obj_get_int(buffer->items[i]);
+	}
+	wifi_dhcpServerIP(dhcp_ip);
+	free(dhcp_ip);
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_dhcp_server_IP_obj, pyb_wifi_dhcp_server_IP);
+
+STATIC mp_obj_t pyb_wifi_set_static_IP(mp_uint_t n_args, const mp_obj_t *args) {
+	int i = 0;
+	const mp_obj_list_t *buffer1 = args[0];
+	uint8_t *host_ip;
+	host_ip = (uint8_t *)malloc(buffer1->len);
+	for(i = 0; i < buffer1->len; i++) {
+		host_ip[i] = mp_obj_get_int(buffer1->items[i]);
+	}
+
+	const mp_obj_list_t *buffer2 = args[1];
+	uint8_t *netmask_ip;
+	netmask_ip = (uint8_t *)malloc(buffer2->len);
+	for(i = 0; i < buffer2->len; i++) {
+		netmask_ip[i] = mp_obj_get_int(buffer2->items[i]);
+	}
+
+	const mp_obj_list_t *buffer3 = args[2];
+	uint8_t *gateway_ip;
+	gateway_ip = (uint8_t *)malloc(buffer3->len);
+	for(i = 0; i < buffer3->len; i++) {
+		gateway_ip[i] = mp_obj_get_int(buffer3->items[i]);
+	}
+
+	const mp_obj_list_t *buffer4 = args[3];
+	 uint8_t *dns_ip;
+	dns_ip = (uint8_t *)malloc(buffer4->len);
+	for(i = 0; i < buffer4->len; i++) {
+		dns_ip[i] = mp_obj_get_int(buffer4->items[i]);
+	}
+
+	wifi_setStaticIP(host_ip, netmask_ip, gateway_ip, dns_ip);
+
+	free(host_ip);
+	free(netmask_ip);
+	free(gateway_ip);
+	free(dns_ip);
+
+	return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_wifi_set_static_IP_obj, 4, 4, pyb_wifi_set_static_IP);
+
+STATIC mp_obj_t pyb_wifi_use_static_IP() {
+
+	wifi_useStaticIP();
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_use_static_IP_obj, pyb_wifi_use_static_IP);
+
+STATIC mp_obj_t pyb_wifi_use_dynamic_IP() {
+
+	wifi_useDynamicIP();
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_use_dynamic_IP_obj, pyb_wifi_use_dynamic_IP);
+
+STATIC const mp_map_elem_t wifi_locals_dict_table[] = {
+    { MP_OBJ_NEW_QSTR(MP_QSTR_on), (mp_obj_t)&pyb_wifi_on_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_off), (mp_obj_t)&pyb_wifi_off_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_connect), (mp_obj_t)&pyb_wifi_connect_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disconnect), (mp_obj_t)&pyb_wifi_disconnect_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_connecting), (mp_obj_t)&pyb_wifi_connecting_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ready), (mp_obj_t)&pyb_wifi_ready_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_listen), (mp_obj_t)&pyb_wifi_listen_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_listening), (mp_obj_t)&pyb_wifi_listening_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_credentials), (mp_obj_t)&pyb_wifi_set_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_credentials), (mp_obj_t)&pyb_wifi_get_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_clear_credentials), (mp_obj_t)&pyb_wifi_clear_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_has_credentials), (mp_obj_t)&pyb_wifi_has_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mac_address), (mp_obj_t)&pyb_wifi_mac_address_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_SSID), (mp_obj_t)&pyb_wifi_SSID_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_BSSID), (mp_obj_t)&pyb_wifi_BSSID_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_RSSI), (mp_obj_t)&pyb_wifi_RSSI_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ping), (mp_obj_t)&pyb_wifi_ping_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_scan), (mp_obj_t)&pyb_wifi_scan_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_resolve), (mp_obj_t)&pyb_wifi_resolve_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_local_IP), (mp_obj_t)&pyb_wifi_local_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_subnet_mask), (mp_obj_t)&pyb_wifi_subnet_mask_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_gateway_IP), (mp_obj_t)&pyb_wifi_gateway_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_dns_server_IP), (mp_obj_t)&pyb_wifi_dns_server_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_dhcp_server_IP), (mp_obj_t)&pyb_wifi_dhcp_server_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_static_IP), (mp_obj_t)&pyb_wifi_set_static_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_use_static_IP), (mp_obj_t)&pyb_wifi_use_static_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_use_dynamic_IP), (mp_obj_t)&pyb_wifi_use_dynamic_IP_obj},
+
+    // class constants
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_UNSEC),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_UNSEC) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WEP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WEP) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WPA) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA2),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WPA2) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_NOT_SET),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_NOT_SET) },
+
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_NOT_SET),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_NOT_SET) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_AES) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_TKIP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_TKIP) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES_TKIP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_AES_TKIP) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(wifi_locals_dict, wifi_locals_dict_table);
+
+const mp_obj_type_t pyb_wifi_type = {
+    { &mp_type_type },
+    .name = MP_QSTR_WIFI,
+//    .make_new = wifi_make_new,
+    .locals_dict = (mp_obj_t)&wifi_locals_dict,
+};
