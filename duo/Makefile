@@ -206,6 +206,7 @@ MP_SOURCE = \
 	i2c.c \
 	extint.c \
 	interrupts.c \
+	wifi.c \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/,$(HAL_SOURCES:.c=.o))
