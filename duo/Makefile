@@ -207,6 +207,8 @@ MP_SOURCE = \
 	extint.c \
 	interrupts.c \
 	wifi.c \
+	TCP_server.c \
+	TCP_client.c \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/,$(HAL_SOURCES:.c=.o))
