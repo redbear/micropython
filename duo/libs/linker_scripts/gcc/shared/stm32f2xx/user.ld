@@ -51,7 +51,7 @@ SECTIONS
         link_destructors_end = .;
 
         . = ALIGN(16);
-		_etext = .;
+        _etext = .;
 
     }>APP_FLASH  AT> APP_FLASH
 
@@ -94,7 +94,7 @@ SECTIONS
         link_bss_end = .;
         link_heap_start = .;
         . = ALIGN(., 4);
-		_end = .;
+        _end = .;
     }> SRAM AT> SRAM
 
     INCLUDE module_end.ld

@@ -75,6 +75,16 @@ void ble_setPublicBDAddr(bd_addr_t addr)
     ble.setPublicBDAddr(addr);
 }
 
+void ble_getLocalBDAddr(bd_addr_t addr)
+{
+    ble.getLocalBdAddr(addr);
+}
+
+void ble_getAddrOfAdvPkt(uint8_t *addr_type, bd_addr_t addr)
+{
+    ble.getAddrOfAdvertisement(addr_type, addr);
+}
+
 void ble_setLocalName(const char *local_name)
 {
     ble.setLocalName(local_name);
@@ -82,12 +92,17 @@ void ble_setLocalName(const char *local_name)
 
 void ble_setAdvParams(advParams_t *adv_params)
 {
-    ble.setAdvParams(adv_params);
+    ble.setAdvertisementParams(adv_params);
 }
 
 void ble_setAdvData(uint16_t size, uint8_t *data)
 {
-    ble.setAdvData(size, data);
+    ble.setAdvertisementData(size, data);
+}
+
+void ble_setScanRspData(uint16_t size, uint8_t *data)
+{
+    ble.setScanResponseData(size, data);
 }
 
 void ble_onConnectedCallback(void (*callback)(BLEStatus_t status, uint16_t handle))

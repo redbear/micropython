@@ -19,9 +19,12 @@ void ble_enablePacketLogger(void);
 void ble_setRandomAddrMode(gap_random_address_type_t random_addr_type);
 void ble_setRandomAddr(bd_addr_t addr);
 void ble_setPublicBDAddr(bd_addr_t addr);
+void ble_getLocalBDAddr(bd_addr_t addr);
+void ble_getAddrOfAdvPkt(uint8_t *addr_type, bd_addr_t addr);
 void ble_setLocalName(const char *local_name);
 void ble_setAdvParams(advParams_t *adv_params);
 void ble_setAdvData(uint16_t size, uint8_t *data);
+void ble_setScanRspData(uint16_t size, uint8_t *data);
 
 void ble_onConnectedCallback(void (*callback)(BLEStatus_t status, uint16_t handle));
 void ble_onDisconnectedCallback(void (*callback)(uint16_t handle));

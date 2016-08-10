@@ -90,7 +90,7 @@ INC += -I../lib/mp-readline
 INC += -I../lib/netutils
 INC += -I../lib/timeutils
 
-LINKER_FILE = libs/linker_scripts/gcc/linker.ld
+LINKER_FILE = libs/linker_scripts/gcc/duo/user-part/linker.ld
 
 # warnning flags
 WARNFLAGS += -Wall -Wno-switch -Wno-error=deprecated-declarations -Werror=implicit-function-declaration -fno-strict-aliasing \
@@ -113,7 +113,10 @@ endif
 LIBS_DEPS += -lcommunication-dynalib -lhal-dynalib -lplatform -lrt-dynalib -lservices-dynalib \
              -lsystem-dynalib -lwiring_globals -lwiring
 
-LDFLAGS += -Llibs/linker_scripts/gcc
+LDFLAGS += -Llibs/linker_scripts/gcc/duo/system-part1
+LDFLAGS += -Llibs/linker_scripts/gcc/duo/system-part2
+LDFLAGS += -Llibs/linker_scripts/gcc/duo/user-part
+LDFLAGS += -Llibs/linker_scripts/gcc/shared/stm32f2xx
 LDFLAGS += -Llibs/linker_scripts/linker
 LDFLAGS += -Llibs/linker_scripts/linker/stm32f2xx
 LDFLAGS += -Llibs/X_lib
