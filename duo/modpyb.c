@@ -50,6 +50,7 @@
 #include "TCP_server.h"
 #include "TCP_client.h"
 #include "ble.h"
+#include "rgb.h"
 
 /// \function millis()
 /// Returns the number of milliseconds since the board was last reset.
@@ -154,6 +155,7 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCP_server), (mp_obj_t)&pyb_TCP_server_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCP_client), (mp_obj_t)&pyb_TCP_client_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_BLE), (mp_obj_t)&pyb_ble_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_RGB), (mp_obj_t)&pyb_rgb_type }, \
 };
 
 
