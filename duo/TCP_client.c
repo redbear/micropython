@@ -230,6 +230,8 @@ mp_obj_t TCP_client_read_data(tcp_client * client_in, mp_obj_t buf_in, mp_obj_t 
 	  	mp_obj_list_append(buf_in, MP_OBJ_NEW_SMALL_INT(buf[i]));
 	}
 
+	free(buf);
+
     return MP_OBJ_NEW_SMALL_INT(num);
 }
 
