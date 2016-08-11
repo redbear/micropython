@@ -1,8 +1,9 @@
 /*
- * This file is part of the MicroPython project, http://micropython.org/
+ * This file is part of the Micro Python project, http://micropython.org/
  *
  * The MIT License (MIT)
  *
+ * Copyright (c) 2013, 2014 Damien P. George
  * Copyright (c) 2016 Paul Sokolovsky
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,40 +25,17 @@
  * THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <stdio.h>
-#include "py/mphal.h"
-#include "py/gc.h"
+#include "py/obj.h"
 
-// Functions for axTLS
+#ifndef __MICROPY_INCLUDED_UNIX_FILE_H__
+#define __MICROPY_INCLUDED_UNIX_FILE_H__
 
-void *malloc(size_t size) {
-    return gc_alloc(size, false);
-}
-void free(void *ptr) {
-    gc_free(ptr);
-}
-void *calloc(size_t nmemb, size_t size) {
-    return m_malloc0(nmemb * size);
-}
-void *realloc(void *ptr, size_t size) {
-    return gc_realloc(ptr, size, true);
-}
+typedef struct _mp_obj_fdfile_t {
+    mp_obj_base_t base;
+    int fd;
+} mp_obj_fdfile_t;
 
-#define PLATFORM_HTONL(_n) ((uint32_t)( (((_n) & 0xff) << 24) | (((_n) & 0xff00) << 8) | (((_n) >> 8)  & 0xff00) | (((_n) >> 24) & 0xff) ))
-#undef htonl
-#undef ntohl
-uint32_t ntohl(uint32_t netlong) {
-    return PLATFORM_HTONL(netlong);
-}
-uint32_t htonl(uint32_t netlong) {
-    return PLATFORM_HTONL(netlong);
-}
+extern const mp_obj_type_t mp_type_fileio;
+extern const mp_obj_type_t mp_type_textio;
 
-time_t time(time_t *t) {
-    return mp_hal_ticks_ms() / 1000;
-}
-
-time_t mktime(void *tm) {
-    return 0;
-}
+#endif // __MICROPY_INCLUDED_UNIX_FILE_H__
