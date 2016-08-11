@@ -16,6 +16,7 @@
 #include "i2c_api.h"
 #include "ble_api.h"
 #include "rgb_api.h"
+#include "servo_api.h"
 
 #ifdef __cplusplus
 extern "C" {
