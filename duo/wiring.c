@@ -12,6 +12,7 @@
 #include "wiring.h"
 #include "extint.h"
 #include "TCP_server.h"
+#include "ble.h"
 
 void do_str(const char *src, mp_parse_input_kind_t input_kind) {
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
@@ -48,6 +49,7 @@ void mp_setup() {
     readline_init0(); 
     extint_init0();
     TCP_server_init0();
+    ble_init0();
 
 #if MICROPY_REPL_EVENT_DRIVEN
     pyexec_event_repl_init();
