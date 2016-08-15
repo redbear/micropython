@@ -101,7 +101,7 @@ STATIC mp_obj_t pyb_servo_set_trim(mp_obj_t self_in, mp_obj_t trim) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_servo_set_trim_obj, pyb_servo_set_trim);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_servo_set_trim_obj, pyb_servo_set_trim);
 
 STATIC const mp_map_elem_t servo_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_attach), (mp_obj_t)&pyb_servo_attach_obj},
