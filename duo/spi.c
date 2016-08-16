@@ -247,34 +247,6 @@ STATIC mp_obj_t pyb_spi_recv(mp_obj_t self_in, mp_obj_t recv_buffer, mp_obj_t le
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_spi_recv_obj, pyb_spi_recv);
 
-/// \method send_recv(send, recv=None, *, timeout=5000)
-///
-/// Send and receive data on the bus at the same time:
-///
-///   - `send` is the data to send (an integer to send, or a buffer object).
-///   - `recv` is a mutable buffer which will be filled with received bytes.
-///   It can be the same as `send`, or omitted.  If omitted, a new buffer will
-///   be created.
-///   - `timeout` is the timeout in milliseconds to wait for the receive.
-///
-/// Return value: the buffer with the received bytes.
-STATIC mp_obj_t pyb_spi_send_recv(mp_uint_t n_args, const mp_obj_t *args) {
-    // TODO assumes transmission size is 8-bits wide
-    pyb_spi_obj_t *self = args[0];
-
-    if(self->spi_id == 1) {
-    	spi_transferBytes(args[1], args[2], mp_obj_get_int(args[3]), NULL);
-    } else if(self->spi_id == 2) {
-    	spi1_transferBytes(args[1], args[2], mp_obj_get_int(args[3]), NULL);
-    } else {
-    	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
-    			"SPI(%d) does not exist", self->spi_id));
-    }
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_spi_send_recv_obj, 4, 4, pyb_spi_send_recv);
-
 STATIC mp_obj_t pyb_spi_set_clock_speed(mp_obj_t self_in, mp_obj_t value, mp_obj_t value_scale) {
     // TODO assumes transmission size is 8-bits wide
     pyb_spi_obj_t *self = self_in;
@@ -388,7 +360,6 @@ STATIC const mp_map_elem_t pyb_spi_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_recv_char), (mp_obj_t)&pyb_spi_recv_char_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_send), (mp_obj_t)&pyb_spi_send_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_recv), (mp_obj_t)&pyb_spi_recv_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_send_recv), (mp_obj_t)&pyb_spi_send_recv_obj },
 
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_clock_speed), (mp_obj_t)&pyb_spi_set_clock_speed_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_bit_order), (mp_obj_t)&pyb_spi_set_bit_order_obj },
