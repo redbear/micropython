@@ -298,23 +298,6 @@ STATIC mp_obj_t pyb_spi_set_clock_divider(mp_obj_t self_in, mp_obj_t divider) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_spi_set_clock_divider_obj, pyb_spi_set_clock_divider);
 
-STATIC mp_obj_t pyb_spi_set_clock_divider_reference(mp_obj_t self_in, mp_obj_t value, mp_obj_t value_scale) {
-    // TODO assumes transmission size is 8-bits wide
-    pyb_spi_obj_t *self = self_in;
-
-    if(self->spi_id == 1) {
-    	spi_setClockDividerReference(mp_obj_get_int(value), mp_obj_get_int(value_scale));
-    } else if(self->spi_id == 2) {
-    	spi1_setClockDividerReference(mp_obj_get_int(value), mp_obj_get_int(value_scale));
-    } else {
-    	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
-    			"SPI(%d) does not exist", self->spi_id));
-    }
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_spi_set_clock_divider_reference_obj, pyb_spi_set_clock_divider_reference);
-
 STATIC mp_obj_t pyb_spi_set_data_mode(mp_obj_t self_in, mp_obj_t mode) {
     // TODO assumes transmission size is 8-bits wide
     pyb_spi_obj_t *self = self_in;
@@ -364,9 +347,26 @@ STATIC const mp_map_elem_t pyb_spi_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_clock_speed), (mp_obj_t)&pyb_spi_set_clock_speed_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_bit_order), (mp_obj_t)&pyb_spi_set_bit_order_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_clock_divider), (mp_obj_t)&pyb_spi_set_clock_divider_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_clock_divider_reference), (mp_obj_t)&pyb_spi_set_clock_divider_reference_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_data_mode), (mp_obj_t)&pyb_spi_set_data_mode_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_isenable), (mp_obj_t)&pyb_spi_isenable_obj },
+
+	// class constants
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_LSBFIRST),        MP_OBJ_NEW_SMALL_INT(LSBFIRST) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_MSBFIRST),        MP_OBJ_NEW_SMALL_INT(MSBFIRST) },
+
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV2),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV2) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV4),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV4) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV8),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV8) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV16),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV16) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV32),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV32) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV64),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV64) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV128),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV128) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_CLOCK_DIV256),        MP_OBJ_NEW_SMALL_INT(SPI_CLOCK_DIV256) },
+
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_MODE0),        MP_OBJ_NEW_SMALL_INT(SPI_MODE0) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_MODE1),        MP_OBJ_NEW_SMALL_INT(SPI_MODE1) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_MODE2),        MP_OBJ_NEW_SMALL_INT(SPI_MODE2) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI_MODE3),        MP_OBJ_NEW_SMALL_INT(SPI_MODE3) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_spi_locals_dict, pyb_spi_locals_dict_table);
