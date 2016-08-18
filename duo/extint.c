@@ -96,6 +96,8 @@ typedef struct {
     mp_int_t line;
 } extint_obj_t;
 
+uint32_t pyb_extint_callback[EXTI_NUM_VECTORS];
+
 // Set override_callback_obj to true if you want to unconditionally set the
 
 uint extint_register(mp_obj_t pin_obj, uint32_t mode, uint32_t pull, mp_obj_t callback_obj, bool override_callback_obj) {
@@ -205,7 +207,6 @@ void extint_init0(void) {
 
 // Interrupt handler
 void Handle_EXTI_Irq(uint32_t line) {
-	printf("line111111 = %lu\n", line);
     if (line < EXTI_NUM_VECTORS) {
         mp_obj_t *cb = &MP_STATE_PORT(pyb_extint_callback)[line];
         if (*cb != mp_const_none) {
@@ -214,7 +215,6 @@ void Handle_EXTI_Irq(uint32_t line) {
             gc_lock();
             nlr_buf_t nlr;
             if (nlr_push(&nlr) == 0) {
-            	printf("line222222 = %lu\n", line);
                 mp_call_function_0(*cb);
                 nlr_pop();
             } else {

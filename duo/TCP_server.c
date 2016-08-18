@@ -30,13 +30,37 @@ typedef struct {
   socket_state_t socket_state;
 }tcp_client_t;
 
+typedef struct _pyb_TCP_server_obj_t {
+    mp_obj_base_t base;
+    pyb_TCP_server_t server_id : 8;
+}pyb_TCP_server_obj_t;
+
 static tcp_server_t servers[MAX_SERVER_SOCKETS];
 static tcp_client_t clients[MAX_CLIENT_SOCKETS];
 
 static uint32_t server_id = 0;
 static uint32_t client_id = 0;
 
-//static uint32_t g_nextSocketId = 0;
+STATIC mp_obj_t pyb_TCP_server_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
+    // check arguments
+    mp_arg_check_num(n_args, n_kw, 1, MP_OBJ_FUN_ARGS_MAX, true);
+
+    int server_id = mp_obj_get_int(args[0]);
+    if (server_id < 0 || server_id > 2) {
+    	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
+    			"server id is 0 to 2"));
+        }
+
+    servers[server_id].socket_id = server_id;
+    servers[server_id].server = (tcp_server *)(TCPServer_newTCPServer(mp_obj_get_int(args[1])));
+    servers[server_id].socket_state = SOCKET_STATE_UNUSED;
+
+	pyb_TCP_server_obj_t *self = m_new0(pyb_TCP_server_obj_t, 1);
+    self->base.type = &pyb_TCP_server_type;
+    self->server_id = server_id;
+
+    return self;
+}
 
 void TCP_server_init0(void) {
   uint8_t i;
@@ -53,23 +77,9 @@ void TCP_server_init0(void) {
   return;
 }
 
-
-STATIC mp_obj_t new_TCP_server(mp_obj_t port) {
-
-	if(server_id < MAX_SERVER_SOCKETS) {
-		servers[server_id].socket_id = server_id;
-		servers[server_id].server = (tcp_server *)(TCPServer_newTCPServer(mp_obj_get_int(port)));
-		servers[server_id++].socket_state = SOCKET_STATE_UNUSED;
-	} else {
-		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The biggest support 3 servers!"));
-	}
-
-	return mp_const_true;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(new_TCP_server_obj, new_TCP_server);
-
-STATIC mp_obj_t TCP_server_begin(mp_obj_t num_in) {
-	uint32_t server_num = mp_obj_get_int(num_in);
+STATIC mp_obj_t TCP_server_begin(mp_obj_t self) {
+	pyb_TCP_server_obj_t *server = self;
+	uint32_t server_num = server->server_id;
 	if(server_num < MAX_SERVER_SOCKETS ) {
 
 	} else {
@@ -95,8 +105,9 @@ STATIC mp_obj_t TCP_server_begin(mp_obj_t num_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_server_begin_obj, TCP_server_begin);
 
-STATIC mp_obj_t TCP_server_stop(mp_obj_t num_in) {
-	uint32_t server_num = mp_obj_get_int(num_in);
+STATIC mp_obj_t TCP_server_stop(mp_obj_t self) {
+	pyb_TCP_server_obj_t *server = self;
+	uint32_t server_num = server->server_id;
 	if(server_num < MAX_SERVER_SOCKETS ) {
 
 	} else {
@@ -122,8 +133,9 @@ STATIC mp_obj_t TCP_server_stop(mp_obj_t num_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_server_stop_obj, TCP_server_stop);
 
-STATIC mp_obj_t delete_TCP_server(mp_obj_t num_in) {
-	uint32_t server_num = mp_obj_get_int(num_in);
+STATIC mp_obj_t delete_TCP_server(mp_obj_t self) {
+	pyb_TCP_server_obj_t *server = self;
+	uint32_t server_num = server->server_id;
 	if(server_num < MAX_SERVER_SOCKETS ) {
 
 	} else {
@@ -142,8 +154,9 @@ STATIC mp_obj_t delete_TCP_server(mp_obj_t num_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(delete_TCP_server_obj, delete_TCP_server);
 
-STATIC mp_obj_t TCP_server_available(mp_obj_t num_in) {
-	uint32_t server_num = mp_obj_get_int(num_in);
+STATIC mp_obj_t TCP_server_available(mp_obj_t self) {
+	pyb_TCP_server_obj_t *server = self;
+	uint32_t server_num = server->server_id;
 	if(server_num < MAX_SERVER_SOCKETS ) {
 
 	} else {
@@ -162,6 +175,9 @@ STATIC mp_obj_t TCP_server_available(mp_obj_t num_in) {
 
 	if(client_id < MAX_CLIENT_SOCKETS) {
 		clients[client_id].client = TCPServer_available(servers[server_num].server);
+		if(NULL == clients[client_id].client){
+			return MP_OBJ_NEW_SMALL_INT(-1);
+		}
 		clients[client_id].socket_id = client_id;
 		clients[client_id].socket_state == SOCKET_STATE_USED;
 	} else {
@@ -172,8 +188,9 @@ STATIC mp_obj_t TCP_server_available(mp_obj_t num_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_server_available_obj, TCP_server_available);
 
-STATIC mp_obj_t TCP_server_write(mp_obj_t num_in, mp_obj_t buf_in, mp_obj_t size_in) {
-	uint32_t server_num = mp_obj_get_int(num_in);
+STATIC mp_obj_t TCP_server_write(mp_obj_t self, mp_obj_t buf_in) {
+	pyb_TCP_server_obj_t *server = self;
+	uint32_t server_num = server->server_id;
 	if(server_num < MAX_SERVER_SOCKETS ) {
 
 	} else {
@@ -195,27 +212,25 @@ STATIC mp_obj_t TCP_server_write(mp_obj_t num_in, mp_obj_t buf_in, mp_obj_t size
 
     if(MP_OBJ_IS_STR(buf_in)) {
     	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	size = TCPServer_write(TCP_server, buf, (size_t)mp_obj_get_int(size_in));
+    	size = TCPServer_write(TCP_server, buf, strlen(buf));
 
     } else {
     	int i = 0;
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);
-    	uint8_t *buf = NULL;
-    	buf = (uint8_t *)malloc(buffer->len);
+    	uint8_t buf[buffer->len];
 
     	for(; i < buffer->len; i++) {
     		buf[i] = mp_obj_get_int(buffer->items[i]);
     	}
-    	size = TCPServer_write(TCP_server, buf, (size_t)mp_obj_get_int(size_in));
+    	size = TCPServer_write(TCP_server, buf, (size_t)(buffer->len));
 
-    	free(buf);
     }
 
     return MP_OBJ_NEW_SMALL_INT(size);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(TCP_server_write_obj, TCP_server_write);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(TCP_server_write_obj, TCP_server_write);
 
-STATIC mp_obj_t TCP_server_write_data(mp_obj_t client_id_in, mp_obj_t buf_in, mp_obj_t size_in) {
+STATIC mp_obj_t TCP_server_write_data(mp_obj_t self, mp_obj_t client_id_in, mp_obj_t buf_in) {
     uint32_t client_id = mp_obj_get_int(client_id_in);
 	int size = 0;
 	if(client_id < MAX_CLIENT_SOCKETS ) {
@@ -224,12 +239,12 @@ STATIC mp_obj_t TCP_server_write_data(mp_obj_t client_id_in, mp_obj_t buf_in, mp
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "Parameter range is 0 to 19£¡"));
 	}
 
-	 return TCP_client_write_data(clients[client_id].client, buf_in, size_in);
+	 return TCP_client_write_data(clients[client_id].client, buf_in);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(TCP_server_write_data_obj, TCP_server_write_data);
 
-STATIC mp_obj_t TCP_server_read_data(mp_obj_t client_id_in, mp_obj_t buf_in, mp_obj_t size_in) {
-    uint32_t client_id = mp_obj_get_int(client_id_in);
+STATIC mp_obj_t TCP_server_read_data(mp_uint_t n_args, const mp_obj_t *args) {
+    uint32_t client_id = mp_obj_get_int(args[1]);
 	int size = 0;
 	if(client_id < MAX_CLIENT_SOCKETS ) {
 
@@ -237,12 +252,11 @@ STATIC mp_obj_t TCP_server_read_data(mp_obj_t client_id_in, mp_obj_t buf_in, mp_
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "Parameter range is 0 to 19£¡"));
 	}
 
-	 return TCP_client_read_data(clients[client_id].client, buf_in, size_in);
+	 return TCP_client_read_data(clients[client_id].client, args[2], args[3]);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(TCP_server_read_data_obj, TCP_server_read_data);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(TCP_server_read_data_obj, 4, 4, TCP_server_read_data);
 
 STATIC const mp_map_elem_t TCP_server_locals_dict_table[] = {
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_new), (mp_obj_t)&new_TCP_server_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_begin), (mp_obj_t)&TCP_server_begin_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_stop), (mp_obj_t)&TCP_server_stop_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_delete), (mp_obj_t)&delete_TCP_server_obj},
@@ -257,5 +271,6 @@ STATIC MP_DEFINE_CONST_DICT(TCP_server_locals_dict, TCP_server_locals_dict_table
 const mp_obj_type_t pyb_TCP_server_type = {
     { &mp_type_type },
     .name = MP_QSTR_TCP_server,
+	.make_new = pyb_TCP_server_make_new,
     .locals_dict = (mp_obj_t)&TCP_server_locals_dict,
 };

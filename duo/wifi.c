@@ -47,18 +47,12 @@ STATIC mp_obj_t pyb_wifi_off() {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_off_obj, pyb_wifi_off);
 
 STATIC mp_obj_t pyb_wifi_connect() {
-//	uint8_t localIP[4] = {0};
 	uint32_t cur_time = millis();
 
 	if(wifi_hasCredentials()) {
 		wifi_connect();
 		wifi_state = WIFI_STATE_CONNECTING;
 		while(!wifi_isReady() && (millis() - cur_time) < 5000) {
-//			while (localIP[0] == 0) {
-//			    wifi_localIP(localIP);
-//			    delay(1000);
-//			  }
-
 		}
 
 		if(wifi_isReady()) {
@@ -214,7 +208,7 @@ STATIC char *get_cipher(int num) {
 	return cipher;
 }
 
-STATIC mp_obj_t pyb_wifi_get_credentials(mp_obj_t buf_in, mp_obj_t count) {
+STATIC mp_obj_t pyb_wifi_get_credentials(mp_obj_t count) {
 	size_t result_count = mp_obj_get_int(count);
 	WiFiAccessPoint results[result_count];
 	int found = wifi_getCredentials(results, result_count);
@@ -239,12 +233,11 @@ STATIC mp_obj_t pyb_wifi_get_credentials(mp_obj_t buf_in, mp_obj_t count) {
 		j += sprintf(buffer + j, "cipher%d : %s    ", i, get_cipher(results[i].cipher));
 		printf("cipher : %s\n\n", get_cipher(results[i].cipher));
 
-		mp_obj_list_append(buf_in, mp_obj_new_str(buffer, strlen(buffer), true));
 	}
 
 	return MP_OBJ_NEW_SMALL_INT(num);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_get_credentials_obj, pyb_wifi_get_credentials);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_get_credentials_obj, pyb_wifi_get_credentials);
 
 STATIC mp_obj_t pyb_wifi_has_credentials() {
 
@@ -266,18 +259,17 @@ STATIC mp_obj_t pyb_wifi_clear_credentials() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_clear_credentials_obj, pyb_wifi_clear_credentials);
 
-STATIC mp_obj_t pyb_wifi_mac_address(mp_obj_t buf_in) {
+STATIC mp_obj_t pyb_wifi_mac_address() {
 	uint8_t mac[6];
-	char buffer[11];
+	int i = 0;
 
 	wifi_macAddress(mac);
 
-	sprintf(buffer, "%d:%d:%d:%d:%d:%d", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+	printf("%d:%d:%d:%d:%d:%d\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_mac_address_obj, pyb_wifi_mac_address);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_mac_address_obj, pyb_wifi_mac_address);
 
 STATIC mp_obj_t pyb_wifi_SSID() {
 	char* ssid = NULL;
@@ -287,9 +279,9 @@ STATIC mp_obj_t pyb_wifi_SSID() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_SSID_obj, pyb_wifi_SSID);
 
-STATIC mp_obj_t pyb_wifi_BSSID(mp_obj_t buf_in) {
+STATIC mp_obj_t pyb_wifi_BSSID() {
 	uint8_t mac[6];
-	char buffer[11];
+	int i = 0;
 
 	if(wifi_state < WIFI_STATE_CONNECTED) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
@@ -297,12 +289,11 @@ STATIC mp_obj_t pyb_wifi_BSSID(mp_obj_t buf_in) {
 
 	wifi_BSSID(mac);
 
-	sprintf(buffer, "%d:%d:%d:%d:%d:%d", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+	printf("%d:%d:%d:%d:%d:%d\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_BSSID_obj, pyb_wifi_BSSID);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_BSSID_obj, pyb_wifi_BSSID);
 
 STATIC mp_obj_t pyb_wifi_RSSI() {
 
@@ -310,24 +301,34 @@ STATIC mp_obj_t pyb_wifi_RSSI() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_RSSI_obj, pyb_wifi_RSSI);
 
+STATIC void conversion_IP(char *ip_string, uint8_t *ip) {
+	int i = 0;
+	char *result = strtok(ip_string, ".");
+
+		ip[i++] = (uint8_t)atoi(result);
+		while(result != NULL) {
+			result = strtok(NULL, ".");
+			ip[i++] = (uint8_t)atoi(result);
+		}
+
+		return;
+}
+
 STATIC mp_obj_t pyb_wifi_ping(mp_obj_t buf_in, mp_obj_t nTries) {
 	int i = 0;
-	const mp_obj_list_t *buffer = buf_in;
+	char *ip_string = mp_obj_str_get_str(buf_in);
 	uint8_t ip[4];
 
 	if(wifi_state < WIFI_STATE_CONNECTED) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
 	}
-
-	for(; i < 4; i++) {
-		ip[i] = mp_obj_get_int(buffer->items[i]);
-	}
+	conversion_IP(ip_string, ip);
 
     return MP_OBJ_NEW_SMALL_INT(wifi_ping(ip, mp_obj_get_int(nTries)));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_ping_obj, pyb_wifi_ping);
 
-STATIC mp_obj_t pyb_wifi_scan(mp_obj_t buf_in, mp_obj_t count) {
+STATIC mp_obj_t pyb_wifi_scan(mp_obj_t count) {
 	size_t result_count = mp_obj_get_int(count);
 	WiFiAccessPoint results[result_count];
 	char buffer[128];
@@ -359,13 +360,11 @@ STATIC mp_obj_t pyb_wifi_scan(mp_obj_t buf_in, mp_obj_t count) {
 
 		j += sprintf(buffer + j, "RSSI%d : %d    ", i, results[i].rssi);
 		printf("RSSI : %d\n\n", results[i].rssi);
-
-		mp_obj_list_append(buf_in, mp_obj_new_str(buffer, strlen(buffer), true));
 	}
 
 	return MP_OBJ_NEW_SMALL_INT(num);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_scan_obj, pyb_wifi_scan);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_scan_obj, pyb_wifi_scan);
 
 STATIC mp_obj_t pyb_wifi_resolve(mp_obj_t buf_in, mp_obj_t data_in) {
 	uint8_t ip[4];
@@ -377,6 +376,7 @@ STATIC mp_obj_t pyb_wifi_resolve(mp_obj_t buf_in, mp_obj_t data_in) {
 	const char* name = mp_obj_str_get_str(buf_in);
 	wifi_resolve(name, ip);
 
+	printf("%d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
 	sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 	mp_obj_list_append(data_in,mp_obj_new_str(buffer, strlen(buffer), true));
 
@@ -384,7 +384,7 @@ STATIC mp_obj_t pyb_wifi_resolve(mp_obj_t buf_in, mp_obj_t data_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_wifi_resolve_obj, pyb_wifi_resolve);
 
-STATIC mp_obj_t pyb_wifi_local_IP(mp_obj_t buf_in) {
+STATIC mp_obj_t pyb_wifi_local_IP() {
 	uint8_t local_ip[4];
 	char buffer[8];
 
@@ -394,14 +394,13 @@ STATIC mp_obj_t pyb_wifi_local_IP(mp_obj_t buf_in) {
 
 	wifi_localIP(local_ip);
 
-	sprintf(buffer, "%d.%d.%d.%d", local_ip[0], local_ip[1], local_ip[2], local_ip[3]);
-	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+	printf("%d.%d.%d.%d\n", local_ip[0], local_ip[1], local_ip[2], local_ip[3]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_local_IP_obj, pyb_wifi_local_IP);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_local_IP_obj, pyb_wifi_local_IP);
 
-STATIC mp_obj_t pyb_wifi_subnet_mask(mp_obj_t buf_in) {
+STATIC mp_obj_t pyb_wifi_subnet_mask() {
 	uint8_t subnet_mask[4];
 	char buffer[8];
 
@@ -411,14 +410,13 @@ STATIC mp_obj_t pyb_wifi_subnet_mask(mp_obj_t buf_in) {
 
 	wifi_subnetMask(subnet_mask);
 
-	sprintf(buffer, "%d.%d.%d.%d", subnet_mask[0], subnet_mask[1], subnet_mask[2], subnet_mask[3]);
-	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+	printf("%d.%d.%d.%d\n", subnet_mask[0], subnet_mask[1], subnet_mask[2], subnet_mask[3]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_subnet_mask_obj, pyb_wifi_subnet_mask);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_subnet_mask_obj, pyb_wifi_subnet_mask);
 
-STATIC mp_obj_t pyb_wifi_gateway_IP(mp_obj_t buf_in) {
+STATIC mp_obj_t pyb_wifi_gateway_IP() {
 	uint8_t gateway_ip[4];
 	char buffer[8];
 
@@ -428,79 +426,64 @@ STATIC mp_obj_t pyb_wifi_gateway_IP(mp_obj_t buf_in) {
 
 	wifi_gatewayIP(gateway_ip);
 
-	sprintf(buffer, "%d.%d.%d.%d", gateway_ip[0], gateway_ip[1], gateway_ip[2], gateway_ip[3]);
-	mp_obj_list_append(buf_in,mp_obj_new_str(buffer, strlen(buffer), true));
+	printf("%d.%d.%d.%d\n", gateway_ip[0], gateway_ip[1], gateway_ip[2], gateway_ip[3]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_gateway_IP_obj, pyb_wifi_gateway_IP);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_gateway_IP_obj, pyb_wifi_gateway_IP);
 
-STATIC mp_obj_t pyb_wifi_dns_server_IP(mp_obj_t buf_in) {
-	int i = 0;
-	const mp_obj_list_t *buffer = buf_in;
-	uint8_t *dns_ip;
-	dns_ip = (uint8_t *)malloc(buffer->len);
-	for(; i < buffer->len; i++) {
-		dns_ip[i] = mp_obj_get_int(buffer->items[i]);
+STATIC mp_obj_t pyb_wifi_dns_server_IP() {
+	uint8_t dns_server_ip[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
 	}
-	wifi_dnsServerIP(dns_ip);
-	free(dns_ip);
+
+	wifi_dnsServerIP(dns_server_ip);
+
+	printf("%d.%d.%d.%d\n", dns_server_ip[0], dns_server_ip[1], dns_server_ip[2], dns_server_ip[3]);
 
     return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_dns_server_IP_obj, pyb_wifi_dns_server_IP);
 
-STATIC mp_obj_t pyb_wifi_dhcp_server_IP(mp_obj_t buf_in) {
-	int i = 0;
-	const mp_obj_list_t *buffer = buf_in;
-	uint8_t *dhcp_ip;
-	dhcp_ip = (uint8_t *)malloc(buffer->len);
-	for(; i < buffer->len; i++) {
-		dhcp_ip[i] = mp_obj_get_int(buffer->items[i]);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_dns_server_IP_obj, pyb_wifi_dns_server_IP);
+
+STATIC mp_obj_t pyb_wifi_dhcp_server_IP() {
+	uint8_t dhcp_server_ip[4];
+	char buffer[8];
+
+	if(wifi_state < WIFI_STATE_CONNECTED) {
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
 	}
-	wifi_dhcpServerIP(dhcp_ip);
-	free(dhcp_ip);
+
+	wifi_dhcpServerIP(dhcp_server_ip);
+
+	printf("%d.%d.%d.%d\n", dhcp_server_ip[0], dhcp_server_ip[1], dhcp_server_ip[2], dhcp_server_ip[3]);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_wifi_dhcp_server_IP_obj, pyb_wifi_dhcp_server_IP);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_dhcp_server_IP_obj, pyb_wifi_dhcp_server_IP);
 
 STATIC mp_obj_t pyb_wifi_set_static_IP(mp_uint_t n_args, const mp_obj_t *args) {
 	int i = 0;
-	const mp_obj_list_t *buffer1 = args[0];
-	uint8_t *host_ip;
-	host_ip = (uint8_t *)malloc(buffer1->len);
-	for(i = 0; i < buffer1->len; i++) {
-		host_ip[i] = mp_obj_get_int(buffer1->items[i]);
-	}
+	const char* buffer1 = mp_obj_str_get_str(args[0]);
+	uint8_t host_ip[4];
+	conversion_IP(buffer1, host_ip);
 
-	const mp_obj_list_t *buffer2 = args[1];
-	uint8_t *netmask_ip;
-	netmask_ip = (uint8_t *)malloc(buffer2->len);
-	for(i = 0; i < buffer2->len; i++) {
-		netmask_ip[i] = mp_obj_get_int(buffer2->items[i]);
-	}
+	const char* buffer2 = mp_obj_str_get_str(args[1]);
+	uint8_t netmask_ip[4];
+	conversion_IP(buffer2, netmask_ip);
 
-	const mp_obj_list_t *buffer3 = args[2];
-	uint8_t *gateway_ip;
-	gateway_ip = (uint8_t *)malloc(buffer3->len);
-	for(i = 0; i < buffer3->len; i++) {
-		gateway_ip[i] = mp_obj_get_int(buffer3->items[i]);
-	}
+	const char* buffer3 = mp_obj_str_get_str(args[2]);
+	uint8_t gateway_ip[4];
+	conversion_IP(buffer3, gateway_ip);
 
-	const mp_obj_list_t *buffer4 = args[3];
-	 uint8_t *dns_ip;
-	dns_ip = (uint8_t *)malloc(buffer4->len);
-	for(i = 0; i < buffer4->len; i++) {
-		dns_ip[i] = mp_obj_get_int(buffer4->items[i]);
-	}
+	const char* buffer4 = mp_obj_str_get_str(args[3]);
+	uint8_t dns_ip[4];
+	conversion_IP(buffer4, dns_ip);
 
 	wifi_setStaticIP(host_ip, netmask_ip, gateway_ip, dns_ip);
-
-	free(host_ip);
-	free(netmask_ip);
-	free(gateway_ip);
-	free(dns_ip);
 
 	return mp_const_none;
 }
