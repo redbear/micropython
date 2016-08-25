@@ -101,11 +101,9 @@ uint32_t pyb_extint_callback[EXTI_NUM_VECTORS];
 // Set override_callback_obj to true if you want to unconditionally set the
 
 uint extint_register(mp_obj_t pin_obj, uint32_t mode, uint32_t pull, mp_obj_t callback_obj, bool override_callback_obj) {
-    const pin_obj_t *pin = NULL;
+    const pin_obj_t *pin = pin_obj;
     uint8_t v_line;
 
-
-    pin = pin_find(pin_obj);
     v_line = pin->pin;
 
     mp_obj_t *cb = &MP_STATE_PORT(pyb_extint_callback)[v_line];
