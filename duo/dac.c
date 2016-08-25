@@ -69,17 +69,33 @@
 /******************************************************************************/
 // Micro Python bindings
 
-typedef enum {
-    DAC_STATE_RESET,
-    DAC_STATE_WRITE_SINGLE,
-    DAC_STATE_BUILTIN_WAVEFORM,
-} pyb_dac_state_t;
+typedef struct _pyb_dac_obj_t {
+    mp_obj_base_t base;
+    uint16_t      dac_pin;
+}pyb_dac_obj_t;
+
+STATIC mp_obj_t pyb_dac_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
+    // check arguments
+    mp_arg_check_num(n_args, n_kw, 1, MP_OBJ_FUN_ARGS_MAX, true);
+
+    if(n_args > 1)
+    {
+    	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError, "argument num/types mismatch"));
+    }
+
+    pin_obj_t *pin = args[0];
+	pyb_dac_obj_t *self = m_new0(pyb_dac_obj_t, 1);
+    self->base.type = &pyb_dac_type;
+    self->dac_pin = pin_mapping(pin);
+
+    return self;
+}
 
 /// \method write(value)
 /// Direct access to the DAC output (8 bit only at the moment).
 STATIC mp_obj_t pyb_dac_write(mp_obj_t self_in, mp_obj_t val) {
-    pin_obj_t *self = self_in;
-    uint16_t pin = pin_mapping(self);
+	pyb_dac_obj_t *dac = self_in;
+    uint16_t pin = dac->dac_pin;
     if(pin == A2 || pin == A3){
     	pinMode(pin, OUTPUT);
     	wiring_analogWrite(pin, mp_obj_get_int(val));
@@ -100,6 +116,7 @@ STATIC MP_DEFINE_CONST_DICT(pyb_dac_locals_dict, pyb_dac_locals_dict_table);
 const mp_obj_type_t pyb_dac_type = {
     { &mp_type_type },
     .name = MP_QSTR_DAC,
+	.make_new = pyb_dac_make_new,
     .locals_dict = (mp_obj_t)&pyb_dac_locals_dict,
 };
 
