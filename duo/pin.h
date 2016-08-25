@@ -33,6 +33,16 @@
 #include MICROPY_PIN_DEFS_PORT_H
 #include "py/obj.h"
 
+#define  MODE_IN  				0
+#define  MODE_OUT 				1
+#define  MODE_INPUT_PULLUP		2
+#define  MODE_INPUT_PULLDOWN		3
+#define  MODE_AF_OUTPUT_PUSHPULL 4
+#define  MODE_AF_OUTPUT_DRAIN	5
+#define  MODE_AN_INPUT			6
+#define  MODE_AN_OUTPUT			7
+#define  MODE_PIN_MODE_NONE		0xff
+
 typedef struct {
   mp_obj_base_t base;
   qstr name;
