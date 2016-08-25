@@ -37,13 +37,35 @@
 
 STATIC const uint16_t analog_pin_table[] = {A0, A1, A2, A3, A4, A5, A6};
 
+typedef struct _pyb_adc_obj_t {
+    mp_obj_base_t base;
+    uint16_t      adc_pin;
+}pyb_adc_obj_t;
+
+STATIC mp_obj_t pyb_adc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
+    // check arguments
+    mp_arg_check_num(n_args, n_kw, 1, MP_OBJ_FUN_ARGS_MAX, true);
+
+    if(n_args > 1)
+    {
+    	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError, "argument num/types mismatch"));
+    }
+
+    pin_obj_t *pin = args[0];
+	pyb_adc_obj_t *self = m_new0(pyb_adc_obj_t, 1);
+    self->base.type = &pyb_adc_type;
+    self->adc_pin = pin_mapping(pin);
+
+    return self;
+}
+
 /// \method read()
 /// Read the value on the analog pin and return it.  The returned value
 /// will be between 0 and 4095.
 STATIC mp_obj_t adc_read(mp_obj_t self_in) {
 	int i = 0;
-    pin_obj_t *self = self_in;
-    uint16_t pin = pin_mapping(self);
+	pyb_adc_obj_t *adc = self_in;
+    uint16_t pin = adc->adc_pin;
     for(i = 0; i < 7; i++){
     	if(analog_pin_table[i] == pin){
     	    uint32_t data = analogRead(pin);
@@ -63,5 +85,6 @@ STATIC MP_DEFINE_CONST_DICT(adc_locals_dict, adc_locals_dict_table);
 const mp_obj_type_t pyb_adc_type = {
     { &mp_type_type },
     .name = MP_QSTR_ADC,
+	.make_new = pyb_adc_make_new,
     .locals_dict = (mp_obj_t)&adc_locals_dict,
 };
