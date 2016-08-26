@@ -68,14 +68,7 @@ void transfer_status(uint8_t num) {
 /* Micro Python bindings                                                      */
 
 /// \classmethod \constructor(bus, ...)
-///
-/// Construct an I2C object on the given bus.  `bus` can be 1 or 2.
-/// With no additional parameters, the I2C object is created but not
-/// initialised (it has the settings from the last initialisation of
-/// the bus, if any).  If extra arguments are given, the bus is initialised.
-/// See `init` for parameters of initialisation.
-
-STATIC mp_obj_t pyb_i2c_make_new(void) {
+STATIC mp_obj_t pyb_i2c_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
 
     // work out i2c bus
 	pyb_i2c_obj_t *self = m_new0(pyb_i2c_obj_t, 1);
@@ -104,8 +97,7 @@ STATIC mp_obj_t pyb_i2c_deinit() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_deinit_obj, pyb_i2c_deinit);
 
-STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t self_in, mp_obj_t data, mp_obj_t addr) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t data, mp_obj_t addr) {
 
     i2c_beginTransmission((uint8_t)mp_obj_get_int(addr));
     i2c_writeOneByte((uint8_t)(mp_obj_get_int(data)));
@@ -113,32 +105,24 @@ STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t self_in, mp_obj_t data, mp_obj_t addr
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_send_char_obj, pyb_i2c_send_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_send_char_obj, pyb_i2c_send_char);
 
-STATIC mp_obj_t pyb_i2c_recv_char(mp_obj_t self_in, mp_obj_t addr) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_recv_char(mp_obj_t addr) {
 
     i2c_requestFrom((uint8_t)(mp_obj_get_int(addr)), 1, 1);
     return MP_OBJ_NEW_SMALL_INT(i2c_read());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_recv_char_obj, pyb_i2c_recv_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_recv_char_obj, pyb_i2c_recv_char);
 
-/// \method send(send, addr=0x00, timeout=5000)
-/// Send data on the bus:
-///
-///   - `send` is the data to send (an integer to send, or a buffer object)
-///   - `addr` is the address to send to (only required in master mode)
-///   - `timeout` is the timeout in milliseconds to wait for the send
-///
-/// Return value: `None`.
-STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t addr) {
+/// method send(send, addr=0x00, timeout=5000)
+STATIC mp_obj_t pyb_i2c_send(mp_obj_t send_buffer, mp_obj_t addr) {
 
 	i2c_beginTransmission((uint8_t)mp_obj_get_int(addr));
 
     if(MP_OBJ_IS_STR(send_buffer)) {
-    	char *buf = mp_obj_str_get_str(send_buffer);
+    	const char *buf = mp_obj_str_get_str(send_buffer);
 
-        i2c_writeBytes(buf, strlen(buf));
+        i2c_writeBytes((uint8_t *)buf, strlen(buf));
         transfer_status(i2c_endTransmission(1));
 
         return MP_OBJ_NEW_SMALL_INT(strlen(buf));
@@ -146,8 +130,7 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t ad
     } else {
     	int i = 0;
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(send_buffer);
-    	char *buf = NULL;
-    	buf = (char *)malloc(buffer->len);
+    	uint8_t buf[buffer->len];
 
     	for(; i < buffer->len; i++) {
     		buf[i] = mp_obj_get_int(buffer->items[i]);
@@ -156,12 +139,10 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t ad
     	i2c_writeBytes(buf, i);
     	transfer_status(i2c_endTransmission(1));
 
-    	free(buf);
-
     	return MP_OBJ_NEW_SMALL_INT(i);
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_send_obj, pyb_i2c_send);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_send_obj, pyb_i2c_send);
 
 /// \method recv(recv, addr=0x00, timeout=5000)
 ///
@@ -174,72 +155,69 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_send_obj, pyb_i2c_send);
 ///
 /// Return value: if `recv` is an integer then a new buffer of the bytes received,
 /// otherwise the same buffer that was passed in to `recv`.
-STATIC mp_obj_t pyb_i2c_recv(mp_uint_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t pyb_i2c_recv(mp_obj_t recv_buf, mp_obj_t address, mp_obj_t quantity) {
     int i = 0;
 	char data = 0;
-	i2c_requestFrom(((uint8_t)mp_obj_get_int(args[2])), (uint8_t)(mp_obj_get_int(args[3])), 1);
+	i2c_requestFrom(((uint8_t)mp_obj_get_int(address)), (uint8_t)(mp_obj_get_int(quantity)), 1);
 
-    for(; i < mp_obj_get_int(args[3]); i++) {
+    for(; i < mp_obj_get_int(quantity); i++) {
     	data = (char)i2c_read();
-    	mp_obj_list_append(args[1], MP_OBJ_NEW_SMALL_INT(data));
+    	mp_obj_list_append(recv_buf, MP_OBJ_NEW_SMALL_INT(data));
 
     }
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_i2c_recv_obj, 4, 4, pyb_i2c_recv);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_recv_obj, pyb_i2c_recv);
 
-STATIC mp_obj_t pyb_i2c_set_speed(mp_obj_t self_in, mp_obj_t clockSpeed) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_set_speed(mp_obj_t clockSpeed) {
+
     i2c_setSpeed(mp_obj_get_int(clockSpeed));
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_set_speed_obj, pyb_i2c_set_speed);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_set_speed_obj, pyb_i2c_set_speed);
 
-STATIC mp_obj_t pyb_i2c_enable_DMA_mode(mp_obj_t self_in, mp_obj_t enableDMAMode) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_enable_DMA_mode(mp_obj_t enableDMAMode) {
+
     i2c_enableDMAMode(mp_obj_get_int(enableDMAMode));
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_enable_DMA_mode_obj, pyb_i2c_enable_DMA_mode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_enable_DMA_mode_obj, pyb_i2c_enable_DMA_mode);
 
-STATIC mp_obj_t pyb_i2c_stretch_clock(mp_obj_t self_in, mp_obj_t stretch) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_stretch_clock(mp_obj_t stretch) {
+
     i2c_stretchClock(mp_obj_get_int(stretch));
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_stretch_clock_obj, pyb_i2c_stretch_clock);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_stretch_clock_obj, pyb_i2c_stretch_clock);
 
 /// \method any()
 /// Return `True` if any characters waiting, else `False`.
-STATIC mp_obj_t pyb_i2c_any(mp_obj_t self_in) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_any() {
 
     return MP_OBJ_NEW_SMALL_INT(i2c_available());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_any_obj, pyb_i2c_any);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_any_obj, pyb_i2c_any);
 
-STATIC mp_obj_t pyb_i2c_flush(mp_obj_t self_in) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_flush() {
+
     i2c_flush();
     printf("flush success!\n");
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_flush_obj, pyb_i2c_flush);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_flush_obj, pyb_i2c_flush);
 
-STATIC mp_obj_t pyb_i2c_peek(mp_obj_t self_in) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_peek() {
 
     return MP_OBJ_NEW_SMALL_INT(i2c_peek());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_peek_obj, pyb_i2c_peek);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_peek_obj, pyb_i2c_peek);
 
-STATIC mp_obj_t pyb_i2c_isenable(mp_obj_t self_in) {
-    pyb_i2c_obj_t *self = self_in;
+STATIC mp_obj_t pyb_i2c_isenable() {
     if (mp_obj_is_true(MP_OBJ_NEW_SMALL_INT(i2c_isEnabled()))) {
    		return mp_const_true;
    	} else {
@@ -248,7 +226,7 @@ STATIC mp_obj_t pyb_i2c_isenable(mp_obj_t self_in) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_isenable_obj, pyb_i2c_isenable);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_isenable_obj, pyb_i2c_isenable);
 
 STATIC const mp_map_elem_t pyb_i2c_locals_dict_table[] = {
     // instance methods

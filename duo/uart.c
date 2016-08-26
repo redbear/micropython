@@ -229,7 +229,7 @@ STATIC mp_obj_t pyb_uart_read(mp_obj_t self_in, mp_obj_t buf_in, mp_obj_t size) 
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_uart_read_obj, pyb_uart_read);
 
-STATIC mp_obj_t pyb_uart_write(mp_obj_t self_in, mp_obj_t *buf_in) {
+STATIC mp_obj_t pyb_uart_write(mp_obj_t self_in, mp_obj_t buf_in) {
     int i = 0;
 	pyb_uart_obj_t *self = self_in;
 	const char* buf = mp_obj_str_get_str(buf_in);

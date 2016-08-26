@@ -65,6 +65,7 @@ STATIC mp_obj_t pin_obj_init_helper(const pin_obj_t *self, mp_uint_t n_args, con
 /// they are used to initialise the pin.  See `init`.
 STATIC mp_obj_t pin_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 1, MP_OBJ_FUN_ARGS_MAX, true);
+    const pin_obj_t *pin = NULL;
 
     if(n_args > 2)
     {
@@ -72,7 +73,14 @@ STATIC mp_obj_t pin_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uin
     }
 
     // Run an argument through the mapper and return the result.
-    const pin_obj_t *pin = args[0];
+    if(MP_OBJ_IS_STR(args[0]))
+    {
+    	pin = pin_find_named_pin(&pin_board_pins_locals_dict, args[0]);
+    } else {
+    	pin = (pin_obj_t *)args[0];
+    }
+
+    pinMode(pin_mapping(pin), mp_obj_get_int(args[1]));
 
     if (n_args > 1 || n_kw > 0) {
         // pin mode given, so configure this GPIO
@@ -266,16 +274,16 @@ STATIC mp_obj_t pin_mode(mp_obj_t self_in) {
 			return MP_OBJ_NEW_QSTR(qstr_from_str("OUTPUT"));
 			break;
 		case 2 :
-			return MP_OBJ_NEW_QSTR(qstr_from_str("INPUT_PULLUP"));
+			return MP_OBJ_NEW_QSTR(qstr_from_str("INPUT_PU"));
 			break;
 		case 3 :
-			return MP_OBJ_NEW_QSTR(qstr_from_str("INPUT_PULLDOWN"));
+			return MP_OBJ_NEW_QSTR(qstr_from_str("INPUT_PD"));
 			break;
 		case 4 :
-			return MP_OBJ_NEW_QSTR(qstr_from_str("AF_OUTPUT_PUSHPULL"));
+			return MP_OBJ_NEW_QSTR(qstr_from_str("AF_OUTPUT_PP"));
 			break;
 		case 5 :
-			return MP_OBJ_NEW_QSTR(qstr_from_str("AF_OUTPUT_DRAIN"));
+			return MP_OBJ_NEW_QSTR(qstr_from_str("AF_OUTPUT_OD"));
 			break;
 		case 6 :
 			return MP_OBJ_NEW_QSTR(qstr_from_str("AN_INPUT"));
@@ -371,12 +379,12 @@ STATIC const mp_map_elem_t pin_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_cpu),     (mp_obj_t)&pin_cpu_pins_obj_type },
 
     // class constants
-    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT),        			MP_OBJ_NEW_SMALL_INT(MODE_IN) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_OUTPUT),       			MP_OBJ_NEW_SMALL_INT(MODE_OUT) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PULLUP), 		MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PULLUP) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PULLDOWN),    	MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PULLDOWN) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_PUSHPULL), 	MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_PUSHPULL) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_DRAIN),    	MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_DRAIN) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT),        		MP_OBJ_NEW_SMALL_INT(MODE_IN) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_OUTPUT),       		MP_OBJ_NEW_SMALL_INT(MODE_OUT) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PU), 			MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PU) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PD),    		MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PD) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_PP), 		MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_PP) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_OD),    	MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_OD) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_AN_INPUT),   			MP_OBJ_NEW_SMALL_INT(MODE_AN_INPUT) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_AN_OUTPUT), 			MP_OBJ_NEW_SMALL_INT(MODE_AN_OUTPUT) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_PIN_MODE_NONE),    	MP_OBJ_NEW_SMALL_INT(MODE_PIN_MODE_NONE) },

@@ -272,7 +272,7 @@ STATIC mp_obj_t pyb_wifi_mac_address() {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_mac_address_obj, pyb_wifi_mac_address);
 
 STATIC mp_obj_t pyb_wifi_SSID() {
-	char* ssid = NULL;
+	const char* ssid = NULL;
 	ssid = wifi_SSID();
 
     return mp_obj_new_str(ssid, strlen(ssid), true);
@@ -316,13 +316,13 @@ STATIC void conversion_IP(char *ip_string, uint8_t *ip) {
 
 STATIC mp_obj_t pyb_wifi_ping(mp_obj_t buf_in, mp_obj_t nTries) {
 	int i = 0;
-	char *ip_string = mp_obj_str_get_str(buf_in);
+	const char *ip_string = mp_obj_str_get_str(buf_in);
 	uint8_t ip[4];
 
 	if(wifi_state < WIFI_STATE_CONNECTED) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi hasn't connected to AP yet.."));
 	}
-	conversion_IP(ip_string, ip);
+	conversion_IP((char *)ip_string, ip);
 
     return MP_OBJ_NEW_SMALL_INT(wifi_ping(ip, mp_obj_get_int(nTries)));
 }
@@ -469,19 +469,19 @@ STATIC mp_obj_t pyb_wifi_set_static_IP(mp_uint_t n_args, const mp_obj_t *args) {
 	int i = 0;
 	const char* buffer1 = mp_obj_str_get_str(args[0]);
 	uint8_t host_ip[4];
-	conversion_IP(buffer1, host_ip);
+	conversion_IP((char *)buffer1, host_ip);
 
 	const char* buffer2 = mp_obj_str_get_str(args[1]);
 	uint8_t netmask_ip[4];
-	conversion_IP(buffer2, netmask_ip);
+	conversion_IP((char *)buffer2, netmask_ip);
 
 	const char* buffer3 = mp_obj_str_get_str(args[2]);
 	uint8_t gateway_ip[4];
-	conversion_IP(buffer3, gateway_ip);
+	conversion_IP((char *)buffer3, gateway_ip);
 
 	const char* buffer4 = mp_obj_str_get_str(args[3]);
 	uint8_t dns_ip[4];
-	conversion_IP(buffer4, dns_ip);
+	conversion_IP((char *)buffer4, dns_ip);
 
 	wifi_setStaticIP(host_ip, netmask_ip, gateway_ip, dns_ip);
 

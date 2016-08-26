@@ -62,7 +62,7 @@ STATIC mp_obj_t pyb_TCP_client_make_new(const mp_obj_type_t *type, mp_uint_t n_a
     return self;
 }
 
-STATIC uint32_t conversion_IP(const char * const ip_string) {
+STATIC uint32_t conversion_IP(char * ip_string) {
 	uint32_t ip = 0;
 	uint32_t ip_temp[4];
 	int i = 0;
@@ -81,7 +81,7 @@ STATIC uint32_t conversion_IP(const char * const ip_string) {
 STATIC mp_obj_t TCP_client_connect_by_IP(mp_obj_t self, mp_obj_t ip_in, mp_obj_t port_in) {
 	const char * const ip_string = mp_obj_str_get_str(ip_in);
 	uint16_t port = mp_obj_get_int(port_in);
-	uint32_t ip = conversion_IP(ip_string);
+	uint32_t ip = conversion_IP((char *)ip_string);
 
 	if(TCP_client.client == NULL) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The client does not exist!"));
@@ -180,8 +180,8 @@ mp_obj_t TCP_client_write_data(tcp_client * client_in, mp_obj_t buf_in) {
 	int size = 0;
 
     if(MP_OBJ_IS_STR(buf_in)) {
-    	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	size = TCPClient_write(client.client, buf, (size_t)strlen(buf));
+    	const char *buf = mp_obj_str_get_str(buf_in);
+    	size = TCPClient_write(client.client, (uint8_t *)buf, (size_t)strlen(buf));
     } else {
     	int i = 0;
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);

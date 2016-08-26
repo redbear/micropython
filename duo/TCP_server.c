@@ -211,8 +211,8 @@ STATIC mp_obj_t TCP_server_write(mp_obj_t self, mp_obj_t buf_in) {
 	int size = 0;
 
     if(MP_OBJ_IS_STR(buf_in)) {
-    	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	size = TCPServer_write(TCP_server, buf, strlen(buf));
+    	const char *buf = mp_obj_str_get_str(buf_in);
+    	size = TCPServer_write(TCP_server, (uint8_t *)buf, strlen(buf));
 
     } else {
     	int i = 0;

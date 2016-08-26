@@ -116,7 +116,7 @@ static uint16_t characteristic1_data_put = 0;
 static uint16_t characteristic1_data_get = 0;
 static uint16_t characteristic1_data_sum = 0;
 
-STATIC addring(int i) {
+STATIC int addring(int i) {
 	return (i + 1) == CHARACTERISTIC1_MAX_LEN ? 0 : i + 1;
 }
 
@@ -176,7 +176,7 @@ STATIC int gattWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t si
   return 0;
 }
 
-STATIC void characteristic2_notify(const uint8_t *buf, const uint16_t size) {
+STATIC void characteristic2_notify(uint8_t *buf, uint16_t size) {
   printf("characteristic2_notify\n");
 
   ble_sendNotify(character2_handle, buf, size);
@@ -230,32 +230,27 @@ STATIC mp_obj_t ble_stop() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(ble_stop_obj, ble_stop);
 
-STATIC mp_obj_t ble_write_data(const uint8_t *buf) {
+STATIC mp_obj_t ble_write_data(uint8_t buf[]) {
 	uint8_t buf_temp[CHARACTERISTIC2_MAX_LEN];
 	int i = 0;
 	int count = 0;
 	uint16_t size = 0;
 
-	if(strlen(buf) < CHARACTERISTIC2_MAX_LEN) {
-		size = strlen(buf);
-		characteristic2_notify(buf, size);
-	} else {
-		while(1) {
-			if((buf_temp[i] = buf[count]) == '\0') {
-				break;
-			}
-			i++;
-			count++;
-
-			if(i == CHARACTERISTIC2_MAX_LEN) {
-				characteristic2_notify(buf_temp, CHARACTERISTIC2_MAX_LEN);
-				memset(buf_temp, '\0', CHARACTERISTIC2_MAX_LEN);
-				i = 0;
-			}
+	while(1) {
+		if((buf_temp[i] = buf[count]) == '\0') {
+			break;
 		}
-		characteristic2_notify(buf_temp, i);
-		size = count;
+		i++;
+		count++;
+
+		if(i == CHARACTERISTIC2_MAX_LEN) {
+			characteristic2_notify(buf_temp, CHARACTERISTIC2_MAX_LEN);
+			memset(buf_temp, '\0', CHARACTERISTIC2_MAX_LEN);
+			i = 0;
+		}
 	}
+	characteristic2_notify(buf_temp, i);
+	size = count;
 
     return MP_OBJ_NEW_SMALL_INT(size);
 }
@@ -264,8 +259,8 @@ STATIC mp_obj_t ble_write(mp_obj_t buf_in) {
 	int i =0;
 
     if(MP_OBJ_IS_STR(buf_in)) {
-    	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	return ble_write_data(buf);
+    	const char *buf = mp_obj_str_get_str(buf_in);
+    	return ble_write_data((uint8_t *)buf);
 
     } else {
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);

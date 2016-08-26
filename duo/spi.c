@@ -171,12 +171,12 @@ STATIC mp_obj_t pyb_spi_send(mp_obj_t self_in, mp_obj_t send_buffer) {
     int i = 0;
 	pyb_spi_obj_t *self = self_in;
     if(MP_OBJ_IS_STR(send_buffer)) {
-    	char *buf = mp_obj_str_get_str(send_buffer);
+    	const char *buf = mp_obj_str_get_str(send_buffer);
 
         if(self->spi_id == 1) {
-        	spi_transferBytes(buf, NULL, strlen(buf) + 1, NULL);
+        	spi_transferBytes((void *)buf, NULL, strlen(buf) + 1, NULL);
         } else if(self->spi_id == 2) {
-        	spi1_transferBytes(buf, NULL, strlen(buf) + 1, NULL);
+        	spi1_transferBytes((void *)buf, NULL, strlen(buf) + 1, NULL);
         } else {
         	nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
         			"SPI(%d) does not exist", self->spi_id));

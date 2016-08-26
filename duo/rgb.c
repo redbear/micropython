@@ -10,7 +10,7 @@
 
 STATIC mp_obj_t pyb_rgb_control(mp_obj_t override) {
 
-	if(mp_const_true == mp_obj_new_bool(override)) {
+	if(mp_const_true == mp_obj_new_bool(mp_obj_get_int(override))) {
 		rgb_controll(1);
 	} else {
 		rgb_controll(0);
@@ -41,10 +41,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_rgb_color_obj, pyb_rgb_color);
 
 STATIC mp_obj_t pyb_rgb_brightness(mp_obj_t brightness, mp_obj_t update) {
 
-	if(mp_const_true == mp_obj_new_bool(update)) {
-		rgb_setBrightness(MP_OBJ_NEW_SMALL_INT(brightness),1);
+	if(mp_const_true == mp_obj_new_bool(mp_obj_get_int(update))) {
+		rgb_setBrightness(mp_obj_get_int(brightness),1);
 	} else {
-		rgb_setBrightness(MP_OBJ_NEW_SMALL_INT(brightness),0);
+		rgb_setBrightness(mp_obj_get_int(brightness),0);
 	}
 
 
