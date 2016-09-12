@@ -17,7 +17,7 @@
 #include "rgb_api.h"
 #include "servo_api.h"
 #include "tone_api.h"
-#include "spark_wiring_ticks.h"
+#include "ticks_api.h"
 
 #ifdef __cplusplus
 extern "C" {
