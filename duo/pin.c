@@ -94,24 +94,6 @@ STATIC mp_obj_t pin_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uin
     return (mp_obj_t)pin;
 }
 
-
-
-// fast method for getting/setting pin value
-STATIC mp_obj_t pin_call(mp_obj_t self_in, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
-    mp_arg_check_num(n_args, n_kw, 0, 1, false);
-    pin_obj_t *self = self_in;
-	const uint16_t pin = pin_mapping(self);
-        // set pin
-    if (mp_obj_is_true(args[0])) {
-    	pinMode(pin, OUTPUT);
-        digitalWrite(pin, 1);
-    } else {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, 0);
-    }
-    return mp_const_none;
-}
-
 /// \classmethod af_list()
 /// Returns an array of alternate functions available for this pin.
 STATIC mp_obj_t pin_afList(mp_obj_t self_in) {
@@ -138,11 +120,21 @@ MP_DEFINE_CONST_FUN_OBJ_KW(pin_init_obj, 1, pin_obj_init);
 ///   - With `value` given, set the logic level of the pin.  `value` can be
 ///   anything that converts to a boolean.  If it converts to `True`, the pin
 ///   is set high, otherwise it is set low.
-STATIC mp_obj_t pin_value(mp_uint_t n_args, const mp_obj_t *args) {
-    return pin_call(args[0], n_args - 1, 0, args + 1);
+STATIC mp_obj_t pin_value(mp_obj_t self_in, mp_obj_t value) {
+    pin_obj_t *self = self_in;
+	const uint16_t pin = pin_mapping(self);
+        // set pin
+    if (mp_obj_is_true(value)) {
+    	pinMode(pin, OUTPUT);
+        digitalWrite(pin, 1);
+    } else {
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, 0);
+    }
+    return mp_const_none;
 
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_value_obj, 2, 2, pin_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pin_value_obj, pin_value);
 
 STATIC mp_obj_t pin_digitalRead(mp_obj_t self_in) {
 	pin_obj_t *self = self_in;
@@ -163,11 +155,11 @@ STATIC mp_obj_t pin_pwmWrite(mp_uint_t n_args, const mp_obj_t *args) {
     	}
     }
     pinMode(pin, OUTPUT);
-    if(2 == n_args)
+    if(3 == n_args)
     {
     	wiring_analogWriteWithFreq(pin, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]));
     }
-    else if(3 == n_args)
+    else if(2 == n_args)
     {
     	wiring_analogWrite(pin, mp_obj_get_int(args[1]));
     }
@@ -406,6 +398,8 @@ STATIC const mp_map_elem_t pin_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_cpu),     (mp_obj_t)&pin_cpu_pins_obj_type },
 
     // class constants
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_HIGH),        		MP_OBJ_NEW_SMALL_INT(VALUE_HIGH) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_LOW),        			MP_OBJ_NEW_SMALL_INT(VALUE_LOW) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT),        		MP_OBJ_NEW_SMALL_INT(MODE_IN) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_OUTPUT),       		MP_OBJ_NEW_SMALL_INT(MODE_OUT) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PU), 			MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PU) },
@@ -422,7 +416,6 @@ const mp_obj_type_t pin_type = {
     { &mp_type_type },
     .name = MP_QSTR_Pin,
     .make_new = pin_make_new,
-    .call = pin_call,
     .locals_dict = (mp_obj_t)&pin_locals_dict,
 };
 

@@ -33,6 +33,9 @@
 #include MICROPY_PIN_DEFS_PORT_H
 #include "py/obj.h"
 
+#define  VALUE_HIGH                 1
+#define  VALUE_LOW                 	0
+
 #define  MODE_IN  					0
 #define  MODE_OUT 					1
 #define  MODE_INPUT_PU				2
