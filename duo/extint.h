@@ -41,8 +41,11 @@ void extint_init0(void);
 #endif
 
 #define EXTI_NUM_VECTORS        (PYB_EXTI_NUM_VECTORS)
+#define   IRQ_RISING_FALLING		0
+#define   IRQ_RISING				1
+#define   IRQ_FALLING				2
 
-uint extint_register(mp_obj_t pin_obj, uint32_t mode, uint32_t pull, mp_obj_t callback_obj, bool override_callback_obj);
+uint extint_register(mp_obj_t pin_obj, uint32_t mode, mp_obj_t callback_obj, bool override_callback_obj);
 
 void Handle_EXTI_Irq(uint32_t line);
 

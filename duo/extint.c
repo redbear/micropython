@@ -40,59 +40,14 @@
 
 /// \moduleref pyb
 /// \class ExtInt - configure I/O pins to interrupt on external events
-///
-/// There are a total of 22 interrupt lines. 16 of these can come from GPIO pins
-/// and the remaining 6 are from internal sources.
-///
-/// For lines 0 thru 15, a given line can map to the corresponding line from an
-/// arbitrary port. So line 0 can map to Px0 where x is A, B, C, ... and
-/// line 1 can map to Px1 where x is A, B, C, ...
-///
-///     def callback(line):
-///         print("line =", line)
-///
-/// Note: ExtInt will automatically configure the gpio line as an input.
-///
-///     extint = pyb.ExtInt(pin, pyb.ExtInt.IRQ_FALLING, pyb.Pin.PULL_UP, callback)
-///
-/// Now every time a falling edge is seen on the X1 pin, the callback will be
-/// called. Caution: mechanical pushbuttons have "bounce" and pushing or
-/// releasing a switch will often generate multiple edges.
-/// See: http://www.eng.utah.edu/~cs5780/debouncing.pdf for a detailed
-/// explanation, along with various techniques for debouncing.
-///
-/// Trying to register 2 callbacks onto the same pin will throw an exception.
-///
-/// If pin is passed as an integer, then it is assumed to map to one of the
-/// internal interrupt sources, and must be in the range 16 thru 22.
-///
-/// All other pin objects go through the pin mapper to come up with one of the
-/// gpio pins.
-///
-///     extint = pyb.ExtInt(pin, mode, pull, callback)
-///
-/// Valid modes are pyb.ExtInt.IRQ_RISING, pyb.ExtInt.IRQ_FALLING,
-/// pyb.ExtInt.IRQ_RISING_FALLING, pyb.ExtInt.EVT_RISING,
-/// pyb.ExtInt.EVT_FALLING, and pyb.ExtInt.EVT_RISING_FALLING.
-///
-/// Only the IRQ_xxx modes have been tested. The EVT_xxx modes have
-/// something to do with sleep mode and the WFE instruction.
-///
-/// Valid pull values are pyb.Pin.PULL_UP, pyb.Pin.PULL_DOWN, pyb.Pin.PULL_NONE.
-///
-/// There is also a C API, so that drivers which require EXTI interrupt lines
-/// can also use this code. See extint.h for the available functions and
-/// usrsw.h for an example of using this.
-
-// TODO Add python method to change callback object.
-
-
 
 // Macro used to set/clear the bit corresponding to the line in the IMR/EMR
 // register in an atomic fashion by using bitband addressing.
 
 typedef struct {
     mp_obj_base_t base;
+    pin_obj_t *pin;
+    uint32_t mode;
     mp_int_t line;
 } extint_obj_t;
 
@@ -100,12 +55,10 @@ uint32_t pyb_extint_callback[EXTI_NUM_VECTORS];
 
 // Set override_callback_obj to true if you want to unconditionally set the
 
-uint extint_register(mp_obj_t pin_obj, uint32_t mode, uint32_t pull, mp_obj_t callback_obj, bool override_callback_obj) {
-    const pin_obj_t *pin = NULL;
+uint extint_register(mp_obj_t pin_obj, uint32_t mode, mp_obj_t callback_obj, bool override_callback_obj) {
+    const pin_obj_t *pin = pin_obj;
     uint8_t v_line;
 
-
-    pin = pin_find(pin_obj);
     v_line = pin->pin;
 
     mp_obj_t *cb = &MP_STATE_PORT(pyb_extint_callback)[v_line];
@@ -116,16 +69,25 @@ uint extint_register(mp_obj_t pin_obj, uint32_t mode, uint32_t pull, mp_obj_t ca
 
     Interrupt_disableAllInterrupts();
     *cb = callback_obj;
-    pinMode(pin_mapping(pin), pull);
-    Interrupt_attachInterrupt(pin_mapping(pin), get_exti_isr(v_line), mode);
     Interrupt_enableAllInterrupts();
+
     return v_line;
 }
 
+STATIC mp_obj_t extint_obj_attach_interrupt(mp_obj_t self_in) {
+	extint_obj_t *self = self_in;
+
+	Interrupt_disableAllInterrupts();
+	Interrupt_attachInterrupt(pin_mapping(self), get_exti_isr(self->pin->pin), self->mode);
+	Interrupt_enableAllInterrupts();
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(extint_obj_attach_interrupt_obj, extint_obj_attach_interrupt);
 
 STATIC mp_obj_t extint_obj_detach_interrupt(mp_obj_t self_in) {
-    pin_obj_t *self = self_in;
-    Interrupt_detachInterrupt(pin_mapping(self));
+	extint_obj_t *self = self_in;
+    Interrupt_detachInterrupt(pin_mapping(self->pin));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(extint_obj_detach_interrupt_obj, extint_obj_detach_interrupt);
@@ -165,7 +127,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(extint_obj_disable_all_interrupt_obj, extint_ob
 STATIC const mp_arg_t pyb_extint_make_new_args[] = {
     { MP_QSTR_pin,      MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
     { MP_QSTR_mode,     MP_ARG_REQUIRED | MP_ARG_INT, {.u_int = 0} },
-    { MP_QSTR_pull,     MP_ARG_REQUIRED | MP_ARG_INT, {.u_int = 0} },
     { MP_QSTR_callback, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
 };
 #define PYB_EXTINT_MAKE_NEW_NUM_ARGS MP_ARRAY_SIZE(pyb_extint_make_new_args)
@@ -176,18 +137,24 @@ STATIC mp_obj_t extint_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_
     // parse args
     mp_arg_val_t vals[PYB_EXTINT_MAKE_NEW_NUM_ARGS];
     mp_arg_parse_all_kw_array(n_args, n_kw, args, PYB_EXTINT_MAKE_NEW_NUM_ARGS, pyb_extint_make_new_args, vals);
-
     extint_obj_t *self = m_new_obj(extint_obj_t);
     self->base.type = type;
-    self->line = extint_register(vals[0].u_obj, vals[1].u_int, vals[2].u_int, vals[3].u_obj, false);
+    self->mode = vals[1].u_int;
+    self->pin = vals[0].u_obj;
+    self->line = extint_register(vals[0].u_obj, vals[1].u_int, vals[2].u_obj, false);
 
     return self;
 }
 
 STATIC const mp_map_elem_t extint_locals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR_detach_interrupt),    (mp_obj_t)&extint_obj_detach_interrupt_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_enable_all_interrupt),  (mp_obj_t)&extint_obj_enable_all_interrupt_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_disable_all_interrupt), (mp_obj_t)&extint_obj_disable_all_interrupt_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_attachInterrupt),    (mp_obj_t)&extint_obj_attach_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_detachInterrupt),    (mp_obj_t)&extint_obj_detach_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_enableAllInterrupt),  (mp_obj_t)&extint_obj_enable_all_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disableAllInterrupt), (mp_obj_t)&extint_obj_disable_all_interrupt_obj },
+
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_CHANGE),      MP_OBJ_NEW_SMALL_INT(IRQ_RISING_FALLING) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_RISING),        		MP_OBJ_NEW_SMALL_INT(IRQ_RISING) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_FALLING),        		MP_OBJ_NEW_SMALL_INT(IRQ_FALLING) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(extint_locals_dict, extint_locals_dict_table);

@@ -116,7 +116,9 @@ static uint16_t characteristic1_data_put = 0;
 static uint16_t characteristic1_data_get = 0;
 static uint16_t characteristic1_data_sum = 0;
 
-STATIC addring(int i) {
+static uint8_t isConnected = 0;
+
+STATIC int addring(int i) {
 	return (i + 1) == CHARACTERISTIC1_MAX_LEN ? 0 : i + 1;
 }
 
@@ -146,6 +148,7 @@ STATIC void put_data(uint8_t data) {
 STATIC void deviceConnectedCallback(BLEStatus_t status, uint16_t handle) {
   switch (status) {
     case BLE_STATUS_OK:
+      isConnected = 1;
       printf("Device connected!\n");
       break;
     default: break;
@@ -153,6 +156,7 @@ STATIC void deviceConnectedCallback(BLEStatus_t status, uint16_t handle) {
 }
 
 STATIC void deviceDisconnectedCallback(uint16_t handle) {
+  isConnected = 0;
   printf("Disconnected!\n");
 }
 
@@ -176,7 +180,7 @@ STATIC int gattWriteCallback(uint16_t value_handle, uint8_t *buffer, uint16_t si
   return 0;
 }
 
-STATIC void characteristic2_notify(const uint8_t *buf, const uint16_t size) {
+STATIC void characteristic2_notify(uint8_t *buf, uint16_t size) {
   printf("characteristic2_notify\n");
 
   ble_sendNotify(character2_handle, buf, size);
@@ -230,32 +234,27 @@ STATIC mp_obj_t ble_stop() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(ble_stop_obj, ble_stop);
 
-STATIC mp_obj_t ble_write_data(const uint8_t *buf) {
+STATIC mp_obj_t ble_write_data(uint8_t buf[]) {
 	uint8_t buf_temp[CHARACTERISTIC2_MAX_LEN];
 	int i = 0;
 	int count = 0;
 	uint16_t size = 0;
 
-	if(strlen(buf) < CHARACTERISTIC2_MAX_LEN) {
-		size = strlen(buf);
-		characteristic2_notify(buf, size);
-	} else {
-		while(1) {
-			if((buf_temp[i] = buf[count]) == '\0') {
-				break;
-			}
-			i++;
-			count++;
-
-			if(i == CHARACTERISTIC2_MAX_LEN) {
-				characteristic2_notify(buf_temp, CHARACTERISTIC2_MAX_LEN);
-				memset(buf_temp, '\0', CHARACTERISTIC2_MAX_LEN);
-				i = 0;
-			}
+	while(1) {
+		if((buf_temp[i] = buf[count]) == '\0') {
+			break;
 		}
-		characteristic2_notify(buf_temp, i);
-		size = count;
+		i++;
+		count++;
+
+		if(i == CHARACTERISTIC2_MAX_LEN) {
+			characteristic2_notify(buf_temp, CHARACTERISTIC2_MAX_LEN);
+			memset(buf_temp, '\0', CHARACTERISTIC2_MAX_LEN);
+			i = 0;
+		}
 	}
+	characteristic2_notify(buf_temp, i);
+	size = count;
 
     return MP_OBJ_NEW_SMALL_INT(size);
 }
@@ -264,8 +263,8 @@ STATIC mp_obj_t ble_write(mp_obj_t buf_in) {
 	int i =0;
 
     if(MP_OBJ_IS_STR(buf_in)) {
-    	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	return ble_write_data(buf);
+    	const char *buf = mp_obj_str_get_str(buf_in);
+    	return ble_write_data((uint8_t *)buf);
 
     } else {
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);
@@ -303,12 +302,21 @@ STATIC mp_obj_t ble_available() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(ble_available_obj, ble_available);
 
+STATIC mp_obj_t ble_connected() {
+	if(isConnected)
+		return mp_const_true;
+	else
+		return mp_const_false;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(ble_connected_obj, ble_connected);
+
 STATIC const mp_map_elem_t ble_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_begin), (mp_obj_t)&ble_begin_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_stop), (mp_obj_t)&ble_stop_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&ble_read_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_write), (mp_obj_t)&ble_write_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_available), (mp_obj_t)&ble_available_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_connected), (mp_obj_t)&ble_connected_obj},
 };
 
 STATIC MP_DEFINE_CONST_DICT(ble_locals_dict, ble_locals_dict_table);

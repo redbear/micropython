@@ -6,7 +6,6 @@
 #include "py/runtime.h"
 #include "py/binary.h"
 #include "py/mphal.h"
-#include "adc.h"
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "wiring.h"
@@ -62,7 +61,7 @@ STATIC mp_obj_t pyb_TCP_client_make_new(const mp_obj_type_t *type, mp_uint_t n_a
     return self;
 }
 
-STATIC uint32_t conversion_IP(const char * const ip_string) {
+STATIC uint32_t conversion_IP(char * ip_string) {
 	uint32_t ip = 0;
 	uint32_t ip_temp[4];
 	int i = 0;
@@ -81,7 +80,7 @@ STATIC uint32_t conversion_IP(const char * const ip_string) {
 STATIC mp_obj_t TCP_client_connect_by_IP(mp_obj_t self, mp_obj_t ip_in, mp_obj_t port_in) {
 	const char * const ip_string = mp_obj_str_get_str(ip_in);
 	uint16_t port = mp_obj_get_int(port_in);
-	uint32_t ip = conversion_IP(ip_string);
+	uint32_t ip = conversion_IP((char *)ip_string);
 
 	if(TCP_client.client == NULL) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The client does not exist!"));
@@ -180,8 +179,8 @@ mp_obj_t TCP_client_write_data(tcp_client * client_in, mp_obj_t buf_in) {
 	int size = 0;
 
     if(MP_OBJ_IS_STR(buf_in)) {
-    	uint8_t *buf = mp_obj_str_get_str(buf_in);
-    	size = TCPClient_write(client.client, buf, (size_t)strlen(buf));
+    	const char *buf = mp_obj_str_get_str(buf_in);
+    	size = TCPClient_write(client.client, (uint8_t *)buf, (size_t)strlen(buf));
     } else {
     	int i = 0;
     	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);
@@ -257,23 +256,6 @@ STATIC mp_obj_t TCP_client_flush(mp_obj_t self) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_client_flush_obj, TCP_client_flush);
 
-STATIC mp_obj_t TCP_client_flush_buffer(mp_obj_t self) {
-	if(TCP_client.client == NULL) {
-		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The client does not exist!"));
-	}
-
-	if(TCP_client.socket_state == SOCKET_STATE_USED) {
-
-	} else {
-		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The client already unused!"));
-	}
-
-	TCPClient_flushBuffer(TCP_client.client);
-
-	return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_client_flush_buffer_obj, TCP_client_flush_buffer);
-
 STATIC mp_obj_t TCP_client_status(mp_obj_t self) {
 	if(TCP_client.client == NULL) {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The client does not exist!"));
@@ -323,15 +305,14 @@ STATIC mp_obj_t TCP_client_peek(mp_obj_t self) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(TCP_client_peek_obj, TCP_client_peek);
 
 STATIC const mp_map_elem_t TCP_client_locals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connect_by_IP), (mp_obj_t)&TCP_client_connect_by_IP_obj},
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_connect_by_host), (mp_obj_t)&TCP_client_connect_by_host_name_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_connectByIP), (mp_obj_t)&TCP_client_connect_by_IP_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_connectByHost), (mp_obj_t)&TCP_client_connect_by_host_name_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_stop), (mp_obj_t)&TCP_client_stop_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_delete), (mp_obj_t)&delete_TCP_client_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_available), (mp_obj_t)&TCP_client_available_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&TCP_client_read_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_write), (mp_obj_t)&TCP_client_write_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_flush), (mp_obj_t)&TCP_client_flush_obj},
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_flush_buffer), (mp_obj_t)&TCP_client_flush_buffer_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_status), (mp_obj_t)&TCP_client_status_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_connected), (mp_obj_t)&TCP_client_connected_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_peek), (mp_obj_t)&TCP_client_peek_obj},

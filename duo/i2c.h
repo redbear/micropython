@@ -25,5 +25,6 @@
  */
 
 // use this for OwnAddress1 to configure I2C in master mode
+
 extern const mp_obj_type_t pyb_i2c_type;
 

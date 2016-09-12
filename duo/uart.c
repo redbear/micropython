@@ -229,7 +229,7 @@ STATIC mp_obj_t pyb_uart_read(mp_obj_t self_in, mp_obj_t buf_in, mp_obj_t size) 
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_uart_read_obj, pyb_uart_read);
 
-STATIC mp_obj_t pyb_uart_write(mp_obj_t self_in, mp_obj_t *buf_in) {
+STATIC mp_obj_t pyb_uart_write(mp_obj_t self_in, mp_obj_t buf_in) {
     int i = 0;
 	pyb_uart_obj_t *self = self_in;
 	const char* buf = mp_obj_str_get_str(buf_in);
@@ -252,19 +252,22 @@ STATIC const mp_map_elem_t pyb_uart_locals_dict_table[] = {
     // instance methods
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_init), (mp_obj_t)&pyb_uart_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_deinit), (mp_obj_t)&pyb_uart_deinit_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_deInit), (mp_obj_t)&pyb_uart_deinit_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_any), (mp_obj_t)&pyb_uart_any_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_flush), (mp_obj_t)&pyb_uart_flush_obj },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_peek), (mp_obj_t)&pyb_uart_peek_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_isenable), (mp_obj_t)&pyb_uart_isenable_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_isEnable), (mp_obj_t)&pyb_uart_isenable_obj },
 
     /// \method read([nbytes])
     { MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&pyb_uart_read_obj },
     /// \method write(buf)
     { MP_OBJ_NEW_QSTR(MP_QSTR_write), (mp_obj_t)&pyb_uart_write_obj },
 
-    { MP_OBJ_NEW_QSTR(MP_QSTR_writechar), (mp_obj_t)&pyb_uart_writechar_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_readchar), (mp_obj_t)&pyb_uart_readchar_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_writeChar), (mp_obj_t)&pyb_uart_writechar_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_readChar), (mp_obj_t)&pyb_uart_readchar_obj },
+
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_BAUDRATE_9600), MP_OBJ_NEW_SMALL_INT(BAUDRATE_9600) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_BAUDRATE_115200), MP_OBJ_NEW_SMALL_INT(BAUDRATE_115200) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_uart_locals_dict, pyb_uart_locals_dict_table);

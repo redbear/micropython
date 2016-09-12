@@ -109,9 +109,9 @@ STATIC const mp_map_elem_t servo_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_detach), (mp_obj_t)&pyb_servo_detach_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&pyb_servo_read_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_write), (mp_obj_t)&pyb_servo_write_obj},
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_write_microseconds), (mp_obj_t)&pyb_servo_write_microseconds_obj},
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_read_microseconds), (mp_obj_t)&pyb_servo_read_microseconds_obj},
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_trim), (mp_obj_t)&pyb_servo_set_trim_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_writeMicroseconds), (mp_obj_t)&pyb_servo_write_microseconds_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_readMicroseconds), (mp_obj_t)&pyb_servo_read_microseconds_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_setTrim), (mp_obj_t)&pyb_servo_set_trim_obj},
 };
 
 STATIC MP_DEFINE_CONST_DICT(servo_locals_dict, servo_locals_dict_table);
