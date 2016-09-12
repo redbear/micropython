@@ -74,30 +74,35 @@ STATIC mp_obj_t pyb_i2c_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
 	pyb_i2c_obj_t *self = m_new0(pyb_i2c_obj_t, 1);
     self->base.type = &pyb_i2c_type;
 
-    i2c_begin();
-
     return self;
 }
 
 
-STATIC mp_obj_t pyb_i2c_init() {
-    i2c_begin();
+STATIC mp_obj_t pyb_i2c_init(mp_uint_t n_args, const mp_obj_t *args) {
+	if(2 == n_args)
+	{
+		i2c_setSpeed(mp_obj_get_int(args[1]));
+	}
+	else
+	{
+		i2c_setSpeed(CLOCK_SPEED_100KHZ);
+	}
+	i2c_begin();
 
 	return mp_const_none;
-
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_init_obj, pyb_i2c_init);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_i2c_init_obj, 1, 2, pyb_i2c_init);
 
 /// \method deinit()
 /// Turn off the I2C bus.
-STATIC mp_obj_t pyb_i2c_deinit() {
+STATIC mp_obj_t pyb_i2c_deinit(mp_obj_t self_in) {
     i2c_end();
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_deinit_obj, pyb_i2c_deinit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_deinit_obj, pyb_i2c_deinit);
 
-STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t data, mp_obj_t addr) {
+STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t self_in, mp_obj_t data, mp_obj_t addr) {
 
     i2c_beginTransmission((uint8_t)mp_obj_get_int(addr));
     i2c_writeOneByte((uint8_t)(mp_obj_get_int(data)));
@@ -105,17 +110,17 @@ STATIC mp_obj_t pyb_i2c_send_char(mp_obj_t data, mp_obj_t addr) {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_send_char_obj, pyb_i2c_send_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_send_char_obj, pyb_i2c_send_char);
 
-STATIC mp_obj_t pyb_i2c_recv_char(mp_obj_t addr) {
+STATIC mp_obj_t pyb_i2c_recv_char(mp_obj_t self_in, mp_obj_t addr) {
 
     i2c_requestFrom((uint8_t)(mp_obj_get_int(addr)), 1, 1);
     return MP_OBJ_NEW_SMALL_INT(i2c_read());
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_recv_char_obj, pyb_i2c_recv_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_recv_char_obj, pyb_i2c_recv_char);
 
 /// method send(send, addr=0x00, timeout=5000)
-STATIC mp_obj_t pyb_i2c_send(mp_obj_t send_buffer, mp_obj_t addr) {
+STATIC mp_obj_t pyb_i2c_send(mp_obj_t self_in, mp_obj_t send_buffer, mp_obj_t addr) {
 
 	i2c_beginTransmission((uint8_t)mp_obj_get_int(addr));
 
@@ -142,7 +147,7 @@ STATIC mp_obj_t pyb_i2c_send(mp_obj_t send_buffer, mp_obj_t addr) {
     	return MP_OBJ_NEW_SMALL_INT(i);
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_send_obj, pyb_i2c_send);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_send_obj, pyb_i2c_send);
 
 /// \method recv(recv, addr=0x00, timeout=5000)
 ///
@@ -155,69 +160,22 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_i2c_send_obj, pyb_i2c_send);
 ///
 /// Return value: if `recv` is an integer then a new buffer of the bytes received,
 /// otherwise the same buffer that was passed in to `recv`.
-STATIC mp_obj_t pyb_i2c_recv(mp_obj_t recv_buf, mp_obj_t address, mp_obj_t quantity) {
+STATIC mp_obj_t pyb_i2c_recv(mp_uint_t n_args, const mp_obj_t *args) {
     int i = 0;
 	char data = 0;
-	i2c_requestFrom(((uint8_t)mp_obj_get_int(address)), (uint8_t)(mp_obj_get_int(quantity)), 1);
+	i2c_requestFrom(((uint8_t)mp_obj_get_int(args[2])), (uint8_t)(mp_obj_get_int(args[3])), 1);
 
-    for(; i < mp_obj_get_int(quantity); i++) {
+    for(; i < mp_obj_get_int(args[3]); i++) {
     	data = (char)i2c_read();
-    	mp_obj_list_append(recv_buf, MP_OBJ_NEW_SMALL_INT(data));
+    	mp_obj_list_append(args[1], MP_OBJ_NEW_SMALL_INT(data));
 
     }
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_i2c_recv_obj, pyb_i2c_recv);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_i2c_recv_obj, 4, 4, pyb_i2c_recv);
 
-STATIC mp_obj_t pyb_i2c_set_speed(mp_obj_t clockSpeed) {
-
-    i2c_setSpeed(mp_obj_get_int(clockSpeed));
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_set_speed_obj, pyb_i2c_set_speed);
-
-STATIC mp_obj_t pyb_i2c_enable_DMA_mode(mp_obj_t enableDMAMode) {
-
-    i2c_enableDMAMode(mp_obj_get_int(enableDMAMode));
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_enable_DMA_mode_obj, pyb_i2c_enable_DMA_mode);
-
-STATIC mp_obj_t pyb_i2c_stretch_clock(mp_obj_t stretch) {
-
-    i2c_stretchClock(mp_obj_get_int(stretch));
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_stretch_clock_obj, pyb_i2c_stretch_clock);
-
-/// \method any()
-/// Return `True` if any characters waiting, else `False`.
-STATIC mp_obj_t pyb_i2c_any() {
-
-    return MP_OBJ_NEW_SMALL_INT(i2c_available());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_any_obj, pyb_i2c_any);
-
-STATIC mp_obj_t pyb_i2c_flush() {
-
-    i2c_flush();
-    printf("flush success!\n");
-
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_flush_obj, pyb_i2c_flush);
-
-STATIC mp_obj_t pyb_i2c_peek() {
-
-    return MP_OBJ_NEW_SMALL_INT(i2c_peek());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_peek_obj, pyb_i2c_peek);
-
-STATIC mp_obj_t pyb_i2c_isenable() {
+STATIC mp_obj_t pyb_i2c_isenable(mp_obj_t self_in) {
     if (mp_obj_is_true(MP_OBJ_NEW_SMALL_INT(i2c_isEnabled()))) {
    		return mp_const_true;
    	} else {
@@ -226,26 +184,22 @@ STATIC mp_obj_t pyb_i2c_isenable() {
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_i2c_isenable_obj, pyb_i2c_isenable);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_i2c_isenable_obj, pyb_i2c_isenable);
 
 STATIC const mp_map_elem_t pyb_i2c_locals_dict_table[] = {
     // instance methods
     { MP_OBJ_NEW_QSTR(MP_QSTR_init), (mp_obj_t)&pyb_i2c_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_deinit), (mp_obj_t)&pyb_i2c_deinit_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_deInit), (mp_obj_t)&pyb_i2c_deinit_obj },
 
-    { MP_OBJ_NEW_QSTR(MP_QSTR_send_char), (mp_obj_t)&pyb_i2c_send_char_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_recv_char), (mp_obj_t)&pyb_i2c_recv_char_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_sendChar), (mp_obj_t)&pyb_i2c_send_char_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_recvChar), (mp_obj_t)&pyb_i2c_recv_char_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_send), (mp_obj_t)&pyb_i2c_send_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_recv), (mp_obj_t)&pyb_i2c_recv_obj },
 
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_set_speed), (mp_obj_t)&pyb_i2c_set_speed_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_enable_DMA_mode), (mp_obj_t)&pyb_i2c_enable_DMA_mode_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_stretch_clock), (mp_obj_t)&pyb_i2c_stretch_clock_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_any), (mp_obj_t)&pyb_i2c_any_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_flush), (mp_obj_t)&pyb_i2c_flush_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_peek), (mp_obj_t)&pyb_i2c_peek_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_isenable), (mp_obj_t)&pyb_i2c_isenable_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_isEnable), (mp_obj_t)&pyb_i2c_isenable_obj },
 
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_CLOCK_SPEED_100KHZ), MP_OBJ_NEW_SMALL_INT(CLOCK_SPEED_100KHZ) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_CLOCK_SPEED_400KHZ), MP_OBJ_NEW_SMALL_INT(CLOCK_SPEED_400KHZ) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_i2c_locals_dict, pyb_i2c_locals_dict_table);

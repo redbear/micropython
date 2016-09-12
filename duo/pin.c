@@ -40,6 +40,8 @@
 
 STATIC const uint16_t board_pin_mapping_tableA[] = {A7, A6, A1, A0, A2, A3, A4, A5, 0, TX, RX, 0, 0, D7, D6, D5};
 STATIC const uint16_t board_pin_mapping_tableB[] = {0, 0, 0, D4, D3, D2, D1, D0};
+STATIC const uint16_t no_pwm_pin_list[] = {A2, A3, D5, D6, D7};
+STATIC const uint16_t analog_pin_table[] = {A0, A1, A2, A3, A4, A5, A6};
 
 const uint16_t pin_mapping(const pin_obj_t *self){
 	if(self->gpio == GPIOA){
@@ -92,31 +94,27 @@ STATIC mp_obj_t pin_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uin
     return (mp_obj_t)pin;
 }
 
+
+
 // fast method for getting/setting pin value
 STATIC mp_obj_t pin_call(mp_obj_t self_in, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
     pin_obj_t *self = self_in;
 	const uint16_t pin = pin_mapping(self);
-    if (n_args == 0) {
-        // get pin
-    	pinMode(pin, INPUT_PULLUP);
-        return MP_OBJ_NEW_SMALL_INT(digitalRead(pin));
-    } else {
         // set pin
-        if (mp_obj_is_true(args[0])) {
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, 1);
-        } else {
-            pinMode(pin, OUTPUT);
-            digitalWrite(pin, 0);
-        }
-        return mp_const_none;
+    if (mp_obj_is_true(args[0])) {
+    	pinMode(pin, OUTPUT);
+        digitalWrite(pin, 1);
+    } else {
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, 0);
     }
+    return mp_const_none;
 }
 
 /// \classmethod af_list()
 /// Returns an array of alternate functions available for this pin.
-STATIC mp_obj_t pin_af_list(mp_obj_t self_in) {
+STATIC mp_obj_t pin_afList(mp_obj_t self_in) {
     pin_obj_t *self = self_in;
     mp_obj_t result = mp_obj_new_list(0, NULL);
 
@@ -126,7 +124,7 @@ STATIC mp_obj_t pin_af_list(mp_obj_t self_in) {
     }
     return result;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_af_list_obj, pin_af_list);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_afList_obj, pin_afList);
 
 STATIC mp_obj_t pin_obj_init(mp_uint_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     return pin_obj_init_helper(args[0], n_args - 1, args + 1, kw_args);
@@ -144,31 +142,85 @@ STATIC mp_obj_t pin_value(mp_uint_t n_args, const mp_obj_t *args) {
     return pin_call(args[0], n_args - 1, 0, args + 1);
 
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_value_obj, 1, 2, pin_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_value_obj, 2, 2, pin_value);
 
-/// \method low()
-/// Set the pin to a low logic level.
-STATIC mp_obj_t pin_low(mp_obj_t self_in) {
-    pin_obj_t *self = self_in;
+STATIC mp_obj_t pin_digitalRead(mp_obj_t self_in) {
+	pin_obj_t *self = self_in;
+	uint16_t pin = pin_mapping(self);
+	pinMode(pin, INPUT_PULLUP);
+    return MP_OBJ_NEW_SMALL_INT(digitalRead(pin));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_digitalRead_obj, pin_digitalRead);
+
+STATIC mp_obj_t pin_pwmWrite(mp_uint_t n_args, const mp_obj_t *args) {
+    int i = 0;
+	pin_obj_t *self = args[0];
     uint16_t pin = pin_mapping(self);
+    for(; i < 5; i++){
+    	if(pin == no_pwm_pin_list[i]){
+    		printf("Error: The pin does not support PWM function\n");
+    		return mp_const_none;
+    	}
+    }
     pinMode(pin, OUTPUT);
-    digitalWrite(pin, 0);
+    if(2 == n_args)
+    {
+    	wiring_analogWriteWithFreq(pin, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]));
+    }
+    else if(3 == n_args)
+    {
+    	wiring_analogWrite(pin, mp_obj_get_int(args[1]));
+    }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_low_obj, pin_low);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_pwmWrite_obj,2 ,3, pin_pwmWrite);
 
-/// \method high()
-/// Set the pin to a high logic level.
-STATIC mp_obj_t pin_high(mp_obj_t self_in) {
-    pin_obj_t *self = self_in;
+STATIC mp_obj_t pin_tone(mp_obj_t self_in, mp_obj_t freq, mp_obj_t duration) {
+	pin_obj_t *self = self_in;
     uint16_t pin = pin_mapping(self);
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, 1);
+
+    tone(pin, mp_obj_get_int(freq), mp_obj_get_int(duration));
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_high_obj, pin_high);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pin_tone_obj, pin_tone);
 
-STATIC mp_obj_t pin_shift_in(mp_obj_t data_in, mp_obj_t clock, mp_obj_t bit_order) {
+STATIC mp_obj_t pin_noTone(mp_obj_t self_in) {
+	pin_obj_t *self = self_in;
+    uint16_t pin = pin_mapping(self);
+
+    noTone(pin);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_noTone_obj, pin_noTone);
+
+STATIC mp_obj_t pin_analogWrite(mp_obj_t self_in, mp_obj_t val) {
+	pin_obj_t *self = self_in;
+	uint16_t pin = pin_mapping(self);
+    if(pin == A2 || pin == A3){
+    	pinMode(pin, OUTPUT);
+    	wiring_analogWrite(pin, mp_obj_get_int(val));
+    } else {
+    	printf("Error: Only pin A2 and A3 support DAC function\n");
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pin_analogWrite_obj, pin_analogWrite);
+
+STATIC mp_obj_t pin_analogRead(mp_obj_t self_in) {
+	int i = 0;
+	pin_obj_t *self = self_in;
+	uint16_t pin = pin_mapping(self);
+    for(i = 0; i < 7; i++){
+    	if(analog_pin_table[i] == pin){
+    	    uint32_t data = analogRead(pin);
+    	    return mp_obj_new_int(data);
+    	}
+    }
+    return mp_obj_new_int(-1);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_analogRead_obj, pin_analogRead);
+
+STATIC mp_obj_t pin_shiftIn(mp_obj_t data_in, mp_obj_t clock, mp_obj_t bit_order) {
     pin_obj_t *self_data = data_in;
     pin_obj_t *self_clock = clock;
     uint8_t data_pin = pin_mapping(self_data);
@@ -178,9 +230,9 @@ STATIC mp_obj_t pin_shift_in(mp_obj_t data_in, mp_obj_t clock, mp_obj_t bit_orde
 
     return MP_OBJ_NEW_SMALL_INT(shiftIn(data_pin, clock_pin, mp_obj_get_int(bit_order)));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(pin_shift_in_obj, pin_shift_in);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(pin_shiftIn_obj, pin_shiftIn);
 
-STATIC mp_obj_t pin_shift_out(mp_uint_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t pin_shiftOut(mp_uint_t n_args, const mp_obj_t *args) {
     pin_obj_t *self_data = args[0];
     pin_obj_t *self_clock = args[1];
     uint8_t data_pin = pin_mapping(self_data);
@@ -194,9 +246,9 @@ STATIC mp_obj_t pin_shift_out(mp_uint_t n_args, const mp_obj_t *args) {
     shiftOut(data_pin, clock_pin, bit_order, value);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_shift_out_obj, 4, 4, pin_shift_out);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pin_shiftOut_obj, 4, 4, pin_shiftOut);
 
-STATIC mp_obj_t pin_pulse_in(mp_obj_t self_in, const mp_obj_t value) {
+STATIC mp_obj_t pin_pulseIn(mp_obj_t self_in, const mp_obj_t value) {
     pin_obj_t *self_data = self_in;
     uint8_t data_pin = pin_mapping(self_data);
     pinMode(data_pin, INPUT);
@@ -204,7 +256,7 @@ STATIC mp_obj_t pin_pulse_in(mp_obj_t self_in, const mp_obj_t value) {
 
     return MP_OBJ_NEW_SMALL_INT(duration);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pin_pulse_in_obj, pin_pulse_in);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(pin_pulseIn_obj, pin_pulseIn);
 
 /// \method name()
 /// Get the pin name.
@@ -249,14 +301,6 @@ STATIC mp_obj_t pin_pin(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_pin_obj, pin_pin);
 
-/// \method gpio()
-/// Returns the base address of the GPIO block associated with this pin.
-STATIC mp_obj_t pin_gpio(mp_obj_t self_in) {
-    pin_obj_t *self = self_in;
-    return MP_OBJ_NEW_SMALL_INT((mp_int_t)self->gpio);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_gpio_obj, pin_gpio);
-
 /// \method mode()
 /// Returns the currently configured mode of the pin. The integer returned
 /// will match one of the allowed constants for the mode argument to the init
@@ -299,24 +343,6 @@ STATIC mp_obj_t pin_mode(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_mode_obj, pin_mode);
 
-/// \method pull()
-/// Returns the currently configured pull of the pin. The integer returned
-/// will match one of the allowed constants for the pull argument to the init
-/// function.
-STATIC mp_obj_t pin_pull(mp_obj_t self_in) {
-    return MP_OBJ_NEW_SMALL_INT(pin_get_pull(self_in));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_pull_obj, pin_pull);
-
-/// \method af()
-/// Returns the currently configured alternate-function of the pin. The
-/// integer returned will match one of the allowed constants for the af
-/// argument to the init function.
-STATIC mp_obj_t pin_af(mp_obj_t self_in) {
-    return MP_OBJ_NEW_SMALL_INT(pin_get_af(self_in));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(pin_af_obj, pin_af);
-
 STATIC void pin_named_pins_obj_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     pin_named_pins_obj_t *self = self_in;
     mp_printf(print, "<Pin.%q>", self->name);
@@ -357,22 +383,23 @@ const mp_obj_type_t pin_board_pins_obj_type = {
 
 STATIC const mp_map_elem_t pin_locals_dict_table[] = {
     // instance methods
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),       (mp_obj_t)&pin_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_value),      (mp_obj_t)&pin_value_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_low),        (mp_obj_t)&pin_low_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_high),       (mp_obj_t)&pin_high_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_name),       (mp_obj_t)&pin_name_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_names),      (mp_obj_t)&pin_names_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_af_list),    (mp_obj_t)&pin_af_list_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_port),       (mp_obj_t)&pin_port_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_pin),        (mp_obj_t)&pin_pin_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_gpio),       (mp_obj_t)&pin_gpio_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mode),       (mp_obj_t)&pin_mode_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_pull),       (mp_obj_t)&pin_pull_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_af),         (mp_obj_t)&pin_af_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_shift_in),   (mp_obj_t)&pin_shift_in_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_shift_out),  (mp_obj_t)&pin_shift_out_obj },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_pulse_in),   (mp_obj_t)&pin_pulse_in_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_pinMode),       	 (mp_obj_t)&pin_init_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_digitalWrite),     (mp_obj_t)&pin_value_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_digitalRead),      (mp_obj_t)&pin_digitalRead_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_pwmWrite),     	 (mp_obj_t)&pin_pwmWrite_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_tone),     	 	 (mp_obj_t)&pin_tone_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_noTone),     	 	 (mp_obj_t)&pin_noTone_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_analogWrite),      (mp_obj_t)&pin_analogWrite_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_analogRead),       (mp_obj_t)&pin_analogRead_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_name),       		 (mp_obj_t)&pin_name_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_names),      		 (mp_obj_t)&pin_names_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_afList),    		 (mp_obj_t)&pin_afList_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_port),       		 (mp_obj_t)&pin_port_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_pin),        		 (mp_obj_t)&pin_pin_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mode),       		 (mp_obj_t)&pin_mode_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_shiftIn),   		 (mp_obj_t)&pin_shiftIn_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_shiftOut),  		 (mp_obj_t)&pin_shiftOut_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_pulseIn),   		 (mp_obj_t)&pin_pulseIn_obj },
 
     // class attributes
     { MP_OBJ_NEW_QSTR(MP_QSTR_board),   (mp_obj_t)&pin_board_pins_obj_type },
@@ -383,11 +410,8 @@ STATIC const mp_map_elem_t pin_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_OUTPUT),       		MP_OBJ_NEW_SMALL_INT(MODE_OUT) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PU), 			MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PU) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_INPUT_PD),    		MP_OBJ_NEW_SMALL_INT(MODE_INPUT_PD) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_PP), 		MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_PP) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_AF_OUTPUT_OD),    	MP_OBJ_NEW_SMALL_INT(MODE_AF_OUTPUT_OD) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_AN_INPUT),   			MP_OBJ_NEW_SMALL_INT(MODE_AN_INPUT) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_AN_OUTPUT), 			MP_OBJ_NEW_SMALL_INT(MODE_AN_OUTPUT) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_PIN_MODE_NONE),    	MP_OBJ_NEW_SMALL_INT(MODE_PIN_MODE_NONE) },
 
 #include "genhdr/pins_af_const.h"
 };

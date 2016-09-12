@@ -135,26 +135,42 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_wifi_listening_obj, pyb_wifi_listening);
 STATIC mp_obj_t pyb_wifi_set_credentials(mp_uint_t n_args, const mp_obj_t *args) {
 
 	const char* ssid = mp_obj_str_get_str(args[0]);
-	const char* password = mp_obj_str_get_str(args[1]);
-	uint32_t security = mp_obj_get_int(args[2]);
-	uint32_t cipher = mp_obj_get_int(args[3]);
+	const char* password;
+	uint32_t security;
+	uint32_t cipher;
 
 	if(wifi_state == WIFI_STATE_OFF)
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "WiFi is turned off. Use WiFi.on() to enable WiFi first."));
 	if(ssid[0] == '\0')
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "The length of SSID is equal to 0."));
 
-	printf("ssid : %s\npassword : %s \nsecurity : %lu\ncipher : %lu\n", ssid, password, security, cipher);
+	if(n_args == 4)
+	{
+		password = mp_obj_str_get_str(args[1]);
+		security = mp_obj_get_int(args[2]);
+		cipher = mp_obj_get_int(args[3]);
+
+		printf("ssid : %s\npassword : %s \nsecurity : %lu\ncipher : %lu\n", ssid, password, security, cipher);
+	} else if(n_args == 2)
+	{
+		password = "00000000";
+		security = mp_obj_get_int(args[1]);
+		cipher = WLAN_CIPHER_NOT_SET;
+		printf("ssid : %s\nsecurity : %lu\n", ssid, security);
+	} else
+	{
+		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError, "argument num/types mismatch"));
+	}
 
 	if(connect_failed)
 		wifi_on();
 	wifi_setCredentials(ssid, password, security, cipher);
 	if(connect_failed)
-		wifi_off;
+		wifi_off();
 
 	return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_wifi_set_credentials_obj, 4, 4, pyb_wifi_set_credentials);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_wifi_set_credentials_obj, 2, 4, pyb_wifi_set_credentials);
 
 STATIC char *get_security(int num) {
 	static char security[16];
@@ -514,37 +530,37 @@ STATIC const mp_map_elem_t wifi_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_ready), (mp_obj_t)&pyb_wifi_ready_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_listen), (mp_obj_t)&pyb_wifi_listen_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_listening), (mp_obj_t)&pyb_wifi_listening_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_credentials), (mp_obj_t)&pyb_wifi_set_credentials_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_get_credentials), (mp_obj_t)&pyb_wifi_get_credentials_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_clear_credentials), (mp_obj_t)&pyb_wifi_clear_credentials_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_has_credentials), (mp_obj_t)&pyb_wifi_has_credentials_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mac_address), (mp_obj_t)&pyb_wifi_mac_address_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_setCredentials), (mp_obj_t)&pyb_wifi_set_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_getCredentials), (mp_obj_t)&pyb_wifi_get_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_clearCredentials), (mp_obj_t)&pyb_wifi_clear_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_hasCredentials), (mp_obj_t)&pyb_wifi_has_credentials_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_macAddress), (mp_obj_t)&pyb_wifi_mac_address_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_SSID), (mp_obj_t)&pyb_wifi_SSID_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_BSSID), (mp_obj_t)&pyb_wifi_BSSID_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_RSSI), (mp_obj_t)&pyb_wifi_RSSI_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_ping), (mp_obj_t)&pyb_wifi_ping_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan), (mp_obj_t)&pyb_wifi_scan_obj},
     { MP_OBJ_NEW_QSTR(MP_QSTR_resolve), (mp_obj_t)&pyb_wifi_resolve_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_local_IP), (mp_obj_t)&pyb_wifi_local_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_subnet_mask), (mp_obj_t)&pyb_wifi_subnet_mask_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_gateway_IP), (mp_obj_t)&pyb_wifi_gateway_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_dns_server_IP), (mp_obj_t)&pyb_wifi_dns_server_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_dhcp_server_IP), (mp_obj_t)&pyb_wifi_dhcp_server_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_static_IP), (mp_obj_t)&pyb_wifi_set_static_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_use_static_IP), (mp_obj_t)&pyb_wifi_use_static_IP_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_use_dynamic_IP), (mp_obj_t)&pyb_wifi_use_dynamic_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_localIP), (mp_obj_t)&pyb_wifi_local_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_subnetMask), (mp_obj_t)&pyb_wifi_subnet_mask_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_gatewayIP), (mp_obj_t)&pyb_wifi_gateway_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_dnsServerIP), (mp_obj_t)&pyb_wifi_dns_server_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_dhcpServerIP), (mp_obj_t)&pyb_wifi_dhcp_server_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_setStaticIP), (mp_obj_t)&pyb_wifi_set_static_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_useStaticIP), (mp_obj_t)&pyb_wifi_use_static_IP_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_useDynamicIP), (mp_obj_t)&pyb_wifi_use_dynamic_IP_obj},
 
     // class constants
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_UNSEC),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_UNSEC) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WEP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WEP) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WPA) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA2),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_WPA2) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_NOT_SET),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_SEC_NOT_SET) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_UNSEC),      MP_OBJ_NEW_SMALL_INT(Mode_WLAN_SEC_UNSEC) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WEP),        MP_OBJ_NEW_SMALL_INT(Mode_WLAN_SEC_WEP) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA),        MP_OBJ_NEW_SMALL_INT(Mode_WLAN_SEC_WPA) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_WPA2),       MP_OBJ_NEW_SMALL_INT(Mode_WLAN_SEC_WPA2) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_SEC_NOT_SET),    MP_OBJ_NEW_SMALL_INT(Mode_WLAN_SEC_NOT_SET) },
 
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_NOT_SET),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_NOT_SET) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_AES) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_TKIP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_TKIP) },
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES_TKIP),        MP_OBJ_NEW_SMALL_INT(GPIO_Mode_WLAN_CIPHER_AES_TKIP) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_NOT_SET),    MP_OBJ_NEW_SMALL_INT(Mode_WLAN_CIPHER_NOT_SET) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES),        MP_OBJ_NEW_SMALL_INT(Mode_WLAN_CIPHER_AES) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_TKIP),       MP_OBJ_NEW_SMALL_INT(Mode_WLAN_CIPHER_TKIP) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_WLAN_CIPHER_AES_TKIP),   MP_OBJ_NEW_SMALL_INT(Mode_WLAN_CIPHER_AES_TKIP) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(wifi_locals_dict, wifi_locals_dict_table);

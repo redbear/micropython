@@ -147,12 +147,12 @@ STATIC mp_obj_t extint_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_
 }
 
 STATIC const mp_map_elem_t extint_locals_dict_table[] = {
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_attach_interrupt),    (mp_obj_t)&extint_obj_attach_interrupt_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_detach_interrupt),    (mp_obj_t)&extint_obj_detach_interrupt_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_enable_all_interrupt),  (mp_obj_t)&extint_obj_enable_all_interrupt_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_disable_all_interrupt), (mp_obj_t)&extint_obj_disable_all_interrupt_obj },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_attachInterrupt),    (mp_obj_t)&extint_obj_attach_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_detachInterrupt),    (mp_obj_t)&extint_obj_detach_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_enableAllInterrupt),  (mp_obj_t)&extint_obj_enable_all_interrupt_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_disableAllInterrupt), (mp_obj_t)&extint_obj_disable_all_interrupt_obj },
 
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_RISING_FALLING),      MP_OBJ_NEW_SMALL_INT(IRQ_RISING_FALLING) },
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_CHANGE),      MP_OBJ_NEW_SMALL_INT(IRQ_RISING_FALLING) },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_RISING),        		MP_OBJ_NEW_SMALL_INT(IRQ_RISING) },
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_IRQ_FALLING),        		MP_OBJ_NEW_SMALL_INT(IRQ_FALLING) },
 };

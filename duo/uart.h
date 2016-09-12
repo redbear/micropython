@@ -24,6 +24,9 @@
  * THE SOFTWARE.
  */
 
+#define BAUDRATE_9600   9600
+#define BAUDRATE_115200   115200
+
 typedef enum {
     PYB_UART_NONE = 0,
     PYB_UART_1 = 1,

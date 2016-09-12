@@ -9,7 +9,6 @@
 #include "tcpclient_api.h"
 #include "wifi_api.h"
 #include "gpio_api.h"
-#include "ticks_api.h"
 #include "timer_api.h"
 #include "interrupt_api.h"
 #include "spi_api.h"
@@ -17,6 +16,8 @@
 #include "ble_api.h"
 #include "rgb_api.h"
 #include "servo_api.h"
+#include "tone_api.h"
+#include "spark_wiring_ticks.h"
 
 #ifdef __cplusplus
 extern "C" {

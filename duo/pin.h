@@ -37,11 +37,8 @@
 #define  MODE_OUT 					1
 #define  MODE_INPUT_PU				2
 #define  MODE_INPUT_PD				3
-#define  MODE_AF_OUTPUT_PP 			4
-#define  MODE_AF_OUTPUT_OD			5
-#define  MODE_AN_INPUT				6
-#define  MODE_AN_OUTPUT				7
-#define  MODE_PIN_MODE_NONE			0xff
+#define  MODE_AN_INPUT				4
+#define  MODE_AN_OUTPUT				5
 
 typedef struct {
   mp_obj_base_t base;

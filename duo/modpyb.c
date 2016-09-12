@@ -39,8 +39,6 @@
 #include "lib/fatfs/ff.h"
 #include "lib/fatfs/diskio.h"
 #include "pin.h"
-#include "adc.h"
-#include "dac.h"
 #include "timer.h"
 #include "uart.h"
 #include "spi.h"
@@ -52,6 +50,7 @@
 #include "ble.h"
 #include "rgb.h"
 #include "servo.h"
+#include "portmodules.h"
 
 /// \function millis()
 /// Returns the number of milliseconds since the board was last reset.
@@ -143,10 +142,10 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_elapsed_millis), (mp_obj_t)&pyb_elapsed_millis_obj }, \
     { MP_OBJ_NEW_QSTR(MP_QSTR_micros), (mp_obj_t)&pyb_micros_obj }, \
     { MP_OBJ_NEW_QSTR(MP_QSTR_elapsed_micros), (mp_obj_t)&pyb_elapsed_micros_obj }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_delayMilliseconds), (mp_obj_t)&time_delay_ms_obj }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_delayMicroseconds), (mp_obj_t)&time_delay_us_obj }, \
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_Pin), (mp_obj_t)&pin_type }, \
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_ADC), (mp_obj_t)&pyb_adc_type }, \
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_DAC), (mp_obj_t)&pyb_dac_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_Timer), (mp_obj_t)&pyb_timer_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_UART), (mp_obj_t)&pyb_uart_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_SPI), (mp_obj_t)&pyb_spi_type }, \

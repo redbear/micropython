@@ -201,8 +201,6 @@ MP_SOURCE = \
     wiring.c \
 	stmhal/pybstdio.c \
 	modpyb.c \
-	adc.c \
-	dac.c \
 	timer.c \
 	uart.c \
 	spi.c \
@@ -215,6 +213,7 @@ MP_SOURCE = \
 	ble.c \
 	rgb.c \
 	servo.c \
+	time.c  \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/,$(HAL_SOURCES:.c=.o))
