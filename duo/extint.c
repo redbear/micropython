@@ -78,7 +78,7 @@ STATIC mp_obj_t extint_obj_attach_interrupt(mp_obj_t self_in) {
 	extint_obj_t *self = self_in;
 
 	Interrupt_disableAllInterrupts();
-	Interrupt_attachInterrupt(pin_mapping(self), get_exti_isr(self->pin->pin), self->mode);
+	Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
 	Interrupt_enableAllInterrupts();
 
     return mp_const_none;
