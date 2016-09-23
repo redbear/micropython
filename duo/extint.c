@@ -74,16 +74,25 @@ uint extint_register(mp_obj_t pin_obj, uint32_t mode, mp_obj_t callback_obj, boo
     return v_line;
 }
 
-STATIC mp_obj_t extint_obj_attach_interrupt(mp_obj_t self_in) {
-	extint_obj_t *self = self_in;
+STATIC mp_obj_t extint_obj_attach_interrupt(mp_uint_t n_args, const mp_obj_t *args) {
+	extint_obj_t *self = args[0];
 
 	Interrupt_disableAllInterrupts();
-	Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
+	if(n_args == 1) {
+		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
+	} else if (n_args == 2){
+		extint_register(self->pin, self->mode, args[1], false);
+		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
+	} else if (n_args == 3){
+		extint_register(self->pin, mp_obj_get_int(args[2]), args[1], false);
+		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin),  mp_obj_get_int(args[2]));
+	}
+
 	Interrupt_enableAllInterrupts();
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(extint_obj_attach_interrupt_obj, extint_obj_attach_interrupt);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(extint_obj_attach_interrupt_obj,1 ,3, extint_obj_attach_interrupt);
 
 STATIC mp_obj_t extint_obj_detach_interrupt(mp_obj_t self_in) {
 	extint_obj_t *self = self_in;

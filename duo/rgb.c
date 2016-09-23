@@ -39,18 +39,13 @@ STATIC mp_obj_t pyb_rgb_color(mp_obj_t red, mp_obj_t green, mp_obj_t blue) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(pyb_rgb_color_obj, pyb_rgb_color);
 
-STATIC mp_obj_t pyb_rgb_brightness(mp_obj_t brightness, mp_obj_t update) {
+STATIC mp_obj_t pyb_rgb_brightness(mp_obj_t brightness) {
 
-	if(mp_const_true == mp_obj_new_bool(mp_obj_get_int(update))) {
-		rgb_setBrightness(mp_obj_get_int(brightness),1);
-	} else {
-		rgb_setBrightness(mp_obj_get_int(brightness),0);
-	}
-
+	rgb_setBrightness(mp_obj_get_int(brightness),1);
 
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(pyb_rgb_brightness_obj, pyb_rgb_brightness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(pyb_rgb_brightness_obj, pyb_rgb_brightness);
 
 
 STATIC const mp_map_elem_t pyb_rgb_locals_dict_table[] = {

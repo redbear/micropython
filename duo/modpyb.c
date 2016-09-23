@@ -152,8 +152,8 @@ STATIC const mp_map_elem_t pyb_module_globals_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_I2C), (mp_obj_t)&pyb_i2c_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_ExtInt), (mp_obj_t)&pyb_extint_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_WiFi), (mp_obj_t)&pyb_wifi_type }, \
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCP_server), (mp_obj_t)&pyb_TCP_server_type }, \
-	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCP_client), (mp_obj_t)&pyb_TCP_client_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCPServer), (mp_obj_t)&pyb_TCP_server_type }, \
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_TCPClient), (mp_obj_t)&pyb_TCP_client_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_BLE), (mp_obj_t)&pyb_ble_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_RGB), (mp_obj_t)&pyb_rgb_type }, \
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_Servo), (mp_obj_t)&pyb_servo_type }, \
