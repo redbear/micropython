@@ -63,10 +63,6 @@ uint extint_register(mp_obj_t pin_obj, uint32_t mode, mp_obj_t callback_obj, boo
 
     mp_obj_t *cb = &MP_STATE_PORT(pyb_extint_callback)[v_line];
 
-    if (!override_callback_obj && *cb != mp_const_none && callback_obj != mp_const_none) {
-        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_ValueError, "ExtInt vector %d is already in use", v_line));
-    }
-
     Interrupt_disableAllInterrupts();
     *cb = callback_obj;
     Interrupt_enableAllInterrupts();
@@ -81,11 +77,19 @@ STATIC mp_obj_t extint_obj_attach_interrupt(mp_uint_t n_args, const mp_obj_t *ar
 	if(n_args == 1) {
 		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
 	} else if (n_args == 2){
-		extint_register(self->pin, self->mode, args[1], false);
-		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
+		if(MP_OBJ_IS_SMALL_INT(args[1])) {
+			Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), mp_obj_get_int(args[1]));
+			printf("change mode\n");
+		}
+		else {
+			extint_register(self->pin, self->mode, args[1], false);
+			Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin), self->mode);
+			printf("change callback\n");
+		}
+
 	} else if (n_args == 3){
-		extint_register(self->pin, mp_obj_get_int(args[2]), args[1], false);
-		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin),  mp_obj_get_int(args[2]));
+		extint_register(self->pin, mp_obj_get_int(args[1]), args[2], false);
+		Interrupt_attachInterrupt(pin_mapping(self->pin), get_exti_isr(self->pin->pin),  mp_obj_get_int(args[1]));
 	}
 
 	Interrupt_enableAllInterrupts();
