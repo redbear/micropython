@@ -112,11 +112,13 @@ static uint16_t character2_handle = 0x0000;
 static uint8_t characteristic1_data[CHARACTERISTIC1_MAX_LEN] = { 0x00 };
 static uint8_t characteristic2_data[CHARACTERISTIC2_MAX_LEN] = { 0x00 };
 
-static uint16_t characteristic1_data_put = 0;
+static uint16_t characteristic2_data_put = 0;
 static uint16_t characteristic1_data_get = 0;
 static uint16_t characteristic1_data_sum = 0;
+static uint16_t characteristic2_data_sum = 0;
 
 static uint8_t isConnected = 0;
+static uint16_t conn_handle = 0;
 
 STATIC int addring(int i) {
 	return (i + 1) == CHARACTERISTIC1_MAX_LEN ? 0 : i + 1;
@@ -136,10 +138,10 @@ STATIC int get_data() {
 }
 
 STATIC void put_data(uint8_t data) {
-	if(characteristic1_data_sum < CHARACTERISTIC1_MAX_LEN) {
-		characteristic1_data[characteristic1_data_put] = data;
-		characteristic1_data_put = addring(characteristic1_data_put);
-		characteristic1_data_sum++;
+	if(characteristic2_data_sum < CHARACTERISTIC2_MAX_LEN) {
+		characteristic2_data[characteristic2_data_put] = data;
+		characteristic2_data_put = addring(characteristic2_data_put);
+		characteristic2_data_sum++;
 	} else {
 		nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_IndentationError, "Receive data buffer is full!"));
 	}
@@ -150,6 +152,7 @@ STATIC void deviceConnectedCallback(BLEStatus_t status, uint16_t handle) {
     case BLE_STATUS_OK:
       isConnected = 1;
       printf("Device connected!\n");
+      conn_handle = handle;
       break;
     default: break;
   }
@@ -283,8 +286,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(ble_write_obj, ble_write);
 STATIC mp_obj_t ble_read(mp_obj_t buf_in, mp_obj_t size_in) {
 	int i = 0, num = 0;
 	char data = 0;
-	mp_obj_list_t *buffer = MP_OBJ_TO_PTR(buf_in);
-
 
 	num = characteristic1_data_sum > mp_obj_get_int(size_in) ? mp_obj_get_int(size_in) : characteristic1_data_sum;
 
@@ -310,6 +311,13 @@ STATIC mp_obj_t ble_connected() {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(ble_connected_obj, ble_connected);
 
+STATIC mp_obj_t pyb_ble_disconnect() {
+	ble_disconnect(conn_handle);
+
+	return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(pyb_ble_disconnect_obj, pyb_ble_disconnect);
+
 STATIC const mp_map_elem_t ble_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_begin), (mp_obj_t)&ble_begin_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_stop), (mp_obj_t)&ble_stop_obj},
@@ -317,6 +325,7 @@ STATIC const mp_map_elem_t ble_locals_dict_table[] = {
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_write), (mp_obj_t)&ble_write_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_available), (mp_obj_t)&ble_available_obj},
 	{ MP_OBJ_NEW_QSTR(MP_QSTR_connected), (mp_obj_t)&ble_connected_obj},
+	{ MP_OBJ_NEW_QSTR(MP_QSTR_disconnect), (mp_obj_t)&pyb_ble_disconnect_obj},
 };
 
 STATIC MP_DEFINE_CONST_DICT(ble_locals_dict, ble_locals_dict_table);
